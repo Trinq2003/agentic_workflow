@@ -9,6 +9,7 @@ class AbstractLanguageModel(ABC):
     Abstract base class that defines the interface for all language models.
     """
     _llm_model: Any = None
+    _config: LLMConfiguration = None
     def __init__(self, llm_config: LLMConfiguration) -> None:
         """
         Initialize the AbstractLanguageModel instance with configuration, model details, and caching options.
