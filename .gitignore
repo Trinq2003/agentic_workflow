@@ -1,0 +1,5 @@
+/.vscodegit 
+*.env
+**/__pycache__/
+/kg_construction/
+/starting_code/
