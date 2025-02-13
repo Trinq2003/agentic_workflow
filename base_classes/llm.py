@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import List, Dict, Union, Any
+from typing import List, Dict, Union, Any, Iterable
 import logging
+from openai.types.chat import ChatCompletionMessageParam, ChatCompletion
+from openai import OpenAI
 
 from configuration.llm_inference_configuration import LLMConfiguration
 
@@ -8,7 +10,7 @@ class AbstractLanguageModel(ABC):
     """
     Abstract base class that defines the interface for all language models.
     """
-    _llm_model: Any = None
+    _llm_model: OpenAI = None
     _config: LLMConfiguration = None
     def __init__(self, llm_config: LLMConfiguration) -> None:
         """
@@ -18,7 +20,6 @@ class AbstractLanguageModel(ABC):
         :type llm_config: LLMConfiguration
         """
         self.logger = logging.getLogger(self.__class__.__name__)
-        self._config: LLMConfiguration = None
 
         self.load_config(llm_config)
 
@@ -75,7 +76,7 @@ class AbstractLanguageModel(ABC):
         """
         return self._query_call_count
     
-    def query(self, query: str, num_responses: int = 1) -> Any:
+    def query(self, query: Iterable[ChatCompletionMessageParam], num_responses: int = 1) -> ChatCompletion:
         """
         Abstract method to query the language model.
 
@@ -90,7 +91,7 @@ class AbstractLanguageModel(ABC):
         return self._query(query, num_responses)
 
     @abstractmethod
-    def _query(self, query: str, num_responses: int = 1) -> Any:
+    def _query(self, query: Iterable[ChatCompletionMessageParam], num_responses: int = 1) -> ChatCompletion:
         """
         Abstract method to query the language model.
 
@@ -104,7 +105,7 @@ class AbstractLanguageModel(ABC):
         pass
 
     @abstractmethod
-    def get_response_texts(self, query_responses: Union[List[Any], Any]) -> List[str]:
+    def get_response_texts(self, query_responses: Union[List[ChatCompletion], ChatCompletion]) -> List[str]:
         """
         Abstract method to extract response texts from the language model's response(s).
 
