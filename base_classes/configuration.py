@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 import re
 from sympy import Q
 import toml
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 class Configuration(ABC):
     def __init__(self):
@@ -17,7 +17,7 @@ class Configuration(ABC):
                 'transform_fn': transform_fn
             }
         
-        self._sensitive_properties = []  # Use a single underscore
+        self._sensitive_properties : List[str | None]= []  # Use a single underscore
 
     @property
     def sensitive_properties(self):
