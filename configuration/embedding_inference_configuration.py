@@ -7,6 +7,7 @@ class EmbeddingModelConfiguration(Configuration):
     Base class for Embedding Model Configurations.
     This includes shared properties for both API-based and locally deployed models.
     """
+    emb_id: str
     model_model_name: str
     model_max_tokens: int
     model_embedding_dims: int
@@ -20,6 +21,7 @@ class EmbeddingModelConfiguration(Configuration):
         Define common properties for embedding models.
         """
         return [
+            ['emb_id', '', str], # Embedding ID
             ['model.model_name', '', str], # Model ID or path
             ['model.max_tokens', 0, int], # Maximum tokens to generate
             ['model.embedding_dims', 0, int], # Number of dimensions in the embedding

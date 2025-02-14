@@ -11,6 +11,7 @@ class AbstractEmbeddingModel(ABC):
     """
     _emb_moddel: Any = None
     _config: EmbeddingModelConfiguration = None
+    _emb_id: str = None
     
     _model_name: str = None
     _max_tokens: int = None
@@ -32,6 +33,7 @@ class AbstractEmbeddingModel(ABC):
         self._model_name: str = self._config.model_model_name
         self._max_tokens: int = self._config.model_max_tokens
         self._embedding_dims: int = self._config.model_embedding_dims
+        self._emb_id: str = self._config.emb_id
 
         self._identical_threshold: float = self._config.model_identical_threshold
 

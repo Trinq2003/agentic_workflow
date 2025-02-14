@@ -12,6 +12,7 @@ class AbstractLanguageModel(ABC):
     """
     _llm_model: OpenAI = None
     _config: LLMConfiguration = None
+    _llm_id: str = None
     
     _model_name: str = None
     _temperature: float = None
@@ -34,6 +35,7 @@ class AbstractLanguageModel(ABC):
 
         self.load_config(llm_config)
 
+        self._llm_id: str = self._config.llm_id
         self._model_name: str = self._config.model_model_name
         self._temperature: float = self._config.model_temperature
         self._max_tokens: int = self._config.model_max_tokens
@@ -48,6 +50,34 @@ class AbstractLanguageModel(ABC):
         self.cost: float = 0.0
 
         self._query_call_count: int = 0
+        
+    @property
+    def llm_id(self) -> str:
+        """
+        Get the LLM ID.
+
+        :return: The LLM ID.
+        :rtype: str
+        """
+        return self._llm_id
+    @property
+    def temperature(self) -> float:
+        """
+        Get the sampling temperature.
+
+        :return: The sampling temperature.
+        :rtype: float
+        """
+        return self._temperature
+    @temperature.setter
+    def temperature(self, value: float) -> None:
+        """
+        Set the sampling temperature.
+
+        :param value: The new sampling temperature.
+        :type value: float
+        """
+        self._temperature = value
     
     def load_config(self, llm_config: LLMConfiguration) -> None:
         """

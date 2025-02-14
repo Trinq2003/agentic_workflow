@@ -1,3 +1,5 @@
+emb_id: "intfloat_ml_e5"  # Unique ID for the embedding model
+
 model:
   model_name: "intfloat/multilingual-e5-large-instruct"  # Model name or path
   max_tokens: 8192  # Maximum tokens to generate

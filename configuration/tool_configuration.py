@@ -7,6 +7,7 @@ class ToolConfiguration(Configuration):
     Base configuration class for LLM models.
     Contains common properties for both local and API-based deployments.
     """
+    tool_id: str
     webhook_base_url: str
     webhook_webhook_path: str
     webhook_method: Optional[str]
@@ -24,6 +25,7 @@ class ToolConfiguration(Configuration):
         Define common properties for all LLM configurations.
         """
         return [
+            ['tool_id', '', str],  # ID of the tool
             ['webhook.base_url', '', str],  # Base URL for the webhook
             ['webhook.webhook_path', '', str],  # Path to the webhook
             ['webhook.method', '', str] # HTTP method for the webhook

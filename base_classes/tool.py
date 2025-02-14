@@ -9,6 +9,7 @@ class AbstractTool(ABC):
     Abstract base class that defines the interface for all tools.
     """
     _config: ToolConfiguration = None
+    _tool_id: str = None
     
     _webhook_base_url: str = None
     _webhook_webhook_path: str = None
@@ -31,6 +32,7 @@ class AbstractTool(ABC):
         self._webhook_method: str = self._config.webhook_method
         self._headers_content_type: str = self._config.headers_content_type
         self._headers_authorization: str = self._config.headers_authorization
+        self._tool_id: str = self._config.tool_id
 
     def load_config(self, tool_config: ToolConfiguration) -> None:
         """

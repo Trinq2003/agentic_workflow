@@ -7,6 +7,7 @@ class LLMConfiguration(Configuration):
     Base configuration class for LLM models.
     Contains common properties for both local and API-based deployments.
     """
+    llm_id: str
     model_model_name: str
     model_temperature: float
     model_max_tokens: int
@@ -24,8 +25,9 @@ class LLMConfiguration(Configuration):
         Define common properties for all LLM configurations.
         """
         return [
+            ['llm_id', '', str],  # ID of the LLM
             ['model.model_name', '', str],  # Model ID or path
-            ['model.temperature', 0.0, float],  # Sampling temperature
+            ['model.temperature', 1.0, float],  # Sampling temperature
             ['model.max_tokens', 0, int],  # Maximum tokens to generate
             ['cache.enabled', True, bool],  # Enable response caching
             ['cache.cache_expiry', 3600, int],  # Cache expiry time in seconds
