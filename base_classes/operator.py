@@ -42,15 +42,26 @@ class AbstractOperator(ABC):
         for llm_component in str_llm_component:
             if llm_component in list_of_initiated_llm:
                 self._llm_component.append(AbstractLanguageModel.get_llm_instance_by_id(llm_id = llm_component))
+            else:
+                raise ValueError(f"LLM ID {llm_component} is not initiated.")
         
         str_tool_component = self._config.operator_tool_component
         list_of_initiated_tool = AbstractTool.get_tool_ids()
         for tool_component in str_tool_component:
             if tool_component in list_of_initiated_tool:
                 self._tool_component.append(AbstractTool.get_tool_instance_by_id(tool_id = tool_component))
+            else:
+                raise ValueError(f"Tool ID {tool_component} is not initiated.")
         
-        self.__class__._list_of_operator_ids.append(self._operator_id)
-        self.__class__._operator_instances_by_id[self._operator_id] = self
+        if self._operator_id in self.__class__._list_of_operator_ids:
+            raise ValueError(f"Operator ID {self._operator_id} is already initiated.")
+        else:
+            self.__class__._list_of_operator_ids.append(self._operator_id)
+                
+        if self._operator_id in self.__class__._operator_instances_by_id.keys():
+            raise ValueError(f"Operator ID {self._operator_id} is already initiated.")
+        else:
+            self.__class__._operator_instances_by_id[self._operator_id] = self
         
     @classmethod
     def get_operator_ids(cls) -> List[str]:

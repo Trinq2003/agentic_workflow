@@ -36,8 +36,15 @@ class AbstractTool(ABC):
         self._headers_authorization: str = self._config.headers_authorization
         self._tool_id: str = self._config.tool_id
         
-        self.__class__._list_of_tool_ids.append(self._tool_id)
-        self.__class__._tool_instances_by_id[self._tool_id] = self
+        if self._tool_id in self.__class__._list_of_tool_ids:
+            raise ValueError(f"Tool ID {self._tool_id} is already initiated.")
+        else:
+            self.__class__._list_of_tool_ids.append(self._tool_id)
+            
+        if self._tool_id in self.__class__._tool_instances_by_id.keys():
+            raise ValueError(f"Tool ID {self._tool_id} is already initiated.")
+        else:
+            self.__class__._tool_instances_by_id[self._tool_id] = self
         
     @classmethod
     def get_tool_ids(cls) -> List[str]:

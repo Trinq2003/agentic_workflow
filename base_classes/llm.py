@@ -52,8 +52,16 @@ class AbstractLanguageModel(ABC):
         self.cost: float = 0.0
 
         self._query_call_count: int = 0
-        self.__class__._list_of_llm_ids.append(self._llm_id)
-        self.__class__._llm_instances_by_id[self._llm_id] = self
+        
+        if self._llm_id in self.__class__._list_of_llm_ids:
+            raise ValueError(f"LLM ID {self._llm_id} is already initiated.")
+        else:
+            self.__class__._list_of_llm_ids.append(self._llm_id)
+        
+        if self._llm_id in self.__class__._llm_instances_by_id.keys():
+            raise ValueError(f"LLM ID {self._llm_id} is already initiated.")
+        else:
+            self.__class__._llm_instances_by_id[self._llm_id] = self
     @classmethod
     def get_llm_ids(cls) -> List[str]:
         """
