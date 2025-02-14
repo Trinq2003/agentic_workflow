@@ -1,0 +1,11 @@
+operator:
+  operator_id: "operator_1"
+  operator_type: "CoT"
+  enabled: true
+  llm_component: ['llm_1', 'llm_2']
+  tool_component: ['tool_1', 'tool_2']
+
+execution:
+  timeout: 60
+  max_retry: 3
+  backoff_factor: 2
