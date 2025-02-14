@@ -11,6 +11,11 @@ class AbstractEmbeddingModel(ABC):
     """
     _emb_moddel: Any = None
     _config: EmbeddingModelConfiguration = None
+    
+    _model_name: str = None
+    _max_tokens: int = None
+    _embedding_dims: int = None
+    _identical_threshold: float = None
     def __init__(self, embedding_model_config: EmbeddingModelConfiguration) -> None:
         """
         Initialize the AbstractEmbeddingModel instance with configuration, model details, and caching options.

@@ -1,0 +1,9 @@
+webhook:
+  base_url: "https://your-n8n-instance.com"
+  webhook_path: "/webhook/your-webhook-id"
+
+headers:
+  contentType: "application/json"
+  authorization: "Bearer your-api-key-here"
+
+payload:

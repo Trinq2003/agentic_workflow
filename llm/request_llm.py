@@ -29,7 +29,7 @@ class RequestLLM(AbstractLanguageModel):
         try:
             response = requests.get(f"{self._config.llm_api_api_base}/ping")
             if response.status_code == 200:
-                self._llm_model: OpenAI = OpenAI(base_url=self._config.llm_api_api_base, api_key=self.llm_api_api_key, max_retries=self._config.retry_max_retries)
+                self._llm_model: OpenAI = OpenAI(base_url=self._config.llm_api_api_base, api_key=self._config.llm_api_api_key, max_retries=self._config.retry_max_retries)
                 self.logger.debug("Model loaded successfully.")
             else:
                 self._llm_model = None
@@ -49,14 +49,9 @@ class RequestLLM(AbstractLanguageModel):
         :rtype: Any
         """
         try:
-            # Create the message list for the OpenAI API
-            messages = [{"role": "system", "content": "You are a helpful assistant."},
-                        {"role": "user", "content": query}]
-            
-            # OpenAI's GPT models that accept messages (e.g., gpt-3.5-turbo or gpt-4)
             response = self._llm_model.chat.completions.create(
                 model=self._model_name,
-                messages=messages,
+                messages=query,
                 max_tokens=self._max_tokens,
                 temperature=self._temperature,
                 n=num_responses  # Number of responses to return

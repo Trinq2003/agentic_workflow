@@ -10,7 +10,7 @@ class HFLocalEmbeddingModel(AbstractEmbeddingModel):
     The HFEmbeddingModel class handles interactions with a Hugging Face deployed model.
     It inherits from AbstractEmbeddingModel and implements the necessary methods.
     """
-
+    _config: LocalEmbeddingModelConfiguration = None
     def __init__(self, embedding_model_config: LocalEmbeddingModelConfiguration) -> None:
         """
         Initialize the HFEmbeddingModel instance with configuration, model details, and caching options.

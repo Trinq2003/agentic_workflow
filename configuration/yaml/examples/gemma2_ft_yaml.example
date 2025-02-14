@@ -1,0 +1,20 @@
+model:
+  model_id: "google/gemma-2-2b-jpn-it"  # Model ID or path
+  temperature: 0.9  # Sampling temperature
+  max_tokens: 512  # Maximum tokens to generate
+
+cache:
+  enabled: true  # Enable response caching
+  cache_expiry: 3600  # Cache expiry time in seconds
+
+deployment:
+  device: "cuda:5"  # Device to deploy the model (e.g., "cuda", "cpu")
+  tensor_parallel_size: 2  # Number of GPUs for tensor parallelism
+  gpu_memory_utilization: 0.9  # GPU memory utilization
+  dtype: "auto"  # Data type for model weights (e.g., "auto", "float16")
+
+path:
+  local_model: "./model_file/llm/google_gemma2"  # Local model path
+  local_tokenizer: "./model_file/llm/google_gemma2"  # Local tokenizer path
+  local_config: ""  # Local config path
+  local_cache: ""  # Local cache path

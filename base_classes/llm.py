@@ -12,6 +12,17 @@ class AbstractLanguageModel(ABC):
     """
     _llm_model: OpenAI = None
     _config: LLMConfiguration = None
+    
+    _model_name: str = None
+    _temperature: float = None
+    _max_tokens: int = None
+    _cache: bool = None
+    _cache_expiry: int = None
+    _response_cache: Dict[str, List[Any]] = None
+    prompt_tokens: int = None
+    completion_tokens: int = None
+    cost: float = None
+    _query_call_count: int = None
     def __init__(self, llm_config: LLMConfiguration) -> None:
         """
         Initialize the AbstractLanguageModel instance with configuration, model details, and caching options.

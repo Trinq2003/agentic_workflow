@@ -1,7 +1,5 @@
 from abc import ABC, abstractmethod
-import re
-from sympy import Q
-import toml
+import yaml
 from typing import Any, Dict, List
 
 class Configuration(ABC):
@@ -17,14 +15,14 @@ class Configuration(ABC):
                 'transform_fn': transform_fn
             }
         
-        self._sensitive_properties : List[str | None]= []  # Use a single underscore
+        self._sensitive_properties: List[str] = []  # Define sensitive properties
 
     @property
     def sensitive_properties(self):
         return self._sensitive_properties
 
     @sensitive_properties.setter
-    def sensitive_properties(self, value):
+    def sensitive_properties(self, value: List[str]):
         self._sensitive_properties = value
 
     @abstractmethod
@@ -41,10 +39,10 @@ class Configuration(ABC):
     
     def _parse_hierarchical(self, section: str, cfg_data: Dict[str, Any]) -> None:
         """
-        Recursively parse the hierarchical structure of the configuration file.
+        Recursively parse the hierarchical structure of the YAML configuration file.
         
         :param section: The current section being processed.
-        :param cfg_data: The hierarchical data from the TOML file.
+        :param cfg_data: The hierarchical data from the YAML file.
         :return: None
         """
         for key, value in cfg_data.items():
@@ -60,7 +58,7 @@ class Configuration(ABC):
                 full_key = f"{section.lower().strip('.')}_{key}" if section else f"{key}"
                 setattr(self, full_key, value)
 
-    def _mask_secret(self, value: str, visible_chars: int = 1):
+    def _mask_secret(self, value: str, visible_chars: int = 1) -> str:
         """
         Mask the secret value, showing only the first few characters.
         
@@ -72,21 +70,21 @@ class Configuration(ABC):
             return '*' * len(value)
         return value[:visible_chars] + '*' * (len(value) - visible_chars)
 
-    def load(self, path):
+    def load(self, path: str) -> None:
         """
-        Load the configuration from the TOML file specified by the path.
+        Load the configuration from the YAML file specified by the path.
         
-        :param path: Path to the TOML config file.
+        :param path: Path to the YAML config file.
         :return: None
         """
-        config = toml.load(path)
-        self._parse_hierarchical("", config)
+        with open(path, "r", encoding="utf-8") as file:
+            config = yaml.safe_load(file)
+            self._parse_hierarchical("", config)
 
-    def __str__(self):
+    def __str__(self) -> str:
         result = f"{self.__class__.__name__} configuration:\n"
         for key in self.__dict__.keys():
             if not key.startswith('_'):
-
                 value = getattr(self, key)
                 if self._is_sensitive(key):
                     value = self._mask_secret(str(value))
