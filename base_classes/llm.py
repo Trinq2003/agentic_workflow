@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Dict, Union, Any, Iterable
+from typing import List, Dict, Union, Any, Iterable, Self
 import logging
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletion
 from openai import OpenAI
@@ -13,6 +13,8 @@ class AbstractLanguageModel(ABC):
     _llm_model: OpenAI = None
     _config: LLMConfiguration = None
     _llm_id: str = None
+    _list_of_llm_ids: List[str] = None
+    _llm_instances_by_id: Dict[str, Self] = None
     
     _model_name: str = None
     _temperature: float = None
@@ -50,7 +52,26 @@ class AbstractLanguageModel(ABC):
         self.cost: float = 0.0
 
         self._query_call_count: int = 0
-        
+        self.__class__._list_of_llm_ids.append(self._llm_id)
+        self.__class__._llm_instances_by_id[self._llm_id] = self
+    @classmethod
+    def get_llm_ids(cls) -> List[str]:
+        """
+        Get the list of operator IDs.
+
+        :return: The list of operator IDs.
+        :rtype: str
+        """
+        return cls._list_of_llm_ids
+    @classmethod
+    def get_llm_instance_by_id(cls, llm_id) -> Self:
+        """
+        Retrieve an instance of the class by its ID.
+
+        :param id: The unique identifier of the instance.
+        :return: The instance if found, otherwise None.
+        """
+        return cls._llm_instances_by_id.get(llm_id, None)
     @property
     def llm_id(self) -> str:
         """
