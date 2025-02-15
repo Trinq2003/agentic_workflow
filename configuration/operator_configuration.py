@@ -17,11 +17,38 @@ class OperatorConfiguration(Configuration):
     execution_backoff_factor: int
     def __init__(self):
         super().__init__()
-        self.sensitive_properties = []
+        sensitive_properties = []
+        self.sensitive_properties = [property_.replace('.', '_') for property_ in sensitive_properties]
+
 
     def _init_properties(self):
         """
         Define common properties for operator.
+        """
+        return [
+            ['operator.operator_id', '', str], # Operator ID
+            ['operator.operator_type', 'CoT', str], # Operator type
+            ['operator.enabled', True, bool], # Operator enabled
+            ['operator.llm_component', [], list], # LLM component
+            ['operator.tool_component', [], list] # Tool component
+            ['execution.timeout', 60, int] # Execution timeout
+            ['execution.max_retry', 3, int] # Execution retry
+            ['execution.backoff_factor', 2, int] # Execution backoff
+        ]
+
+class CoTOperatorConfiguration(Configuration):
+    """
+    Configuration class for CoT operator.
+    """
+    def __init__(self):
+        super().__init__()
+        sensitive_properties = []
+        self.sensitive_properties = [property_.replace('.', '_') for property_ in sensitive_properties]
+
+
+    def _init_properties(self):
+        """
+        Define properties for CoT operator.
         """
         return [
             ['operator.operator_id', '', str], # Operator ID

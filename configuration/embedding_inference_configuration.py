@@ -14,7 +14,9 @@ class EmbeddingModelConfiguration(Configuration):
     model_identical_threshold: Optional[float]
     def __init__(self):
         super().__init__()
-        self.sensitive_properties = []
+        sensitive_properties = []
+        self.sensitive_properties = [property_.replace('.', '_') for property_ in sensitive_properties]
+
 
     def _init_properties(self):
         """

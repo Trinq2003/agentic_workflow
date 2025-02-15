@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import Optional, List, Dict, Self
+from typing import Optional, List, Dict, Self, Any, Union
 import logging
+import requests
+import json
 
 from configuration.tool_configuration import ToolConfiguration
 
@@ -12,6 +14,7 @@ class AbstractTool(ABC):
     _tool_id: str = None
     _list_of_tool_ids: List[str] = None
     _tool_instances_by_id: Dict[str, Self] = None
+    _data: Any = None
     
     _webhook_base_url: str = None
     _webhook_webhook_path: str = None
@@ -31,7 +34,7 @@ class AbstractTool(ABC):
         
         self._webhook_base_url: str = self._config.webhook_base_url
         self._webhook_webhook_path: str = self._config.webhook_webhook_path
-        self._webhook_method: str = self._config.webhook_method
+        self._webhook_method: str = self._config.webhook_method.upper()
         self._headers_content_type: str = self._config.headers_content_type
         self._headers_authorization: str = self._config.headers_authorization
         self._tool_id: str = self._config.tool_id
@@ -75,17 +78,44 @@ class AbstractTool(ABC):
         self._config = tool_config
         self.logger.debug(f"Config loaded.")
 
-    @abstractmethod
-    def execute(self) -> None:
+    def execute(self, **kwargs) -> Union[Dict[str, Any], None, List[Dict[str, Any]]]:
         """
         Abstract method to execute the tool.
         """
-        pass
+        self._set_tool_data(self, **kwargs)
+        
+        url = f"{self._webhook_base_url}/{self._webhook_webhook_path}"
+        headers = {"Content-Type": self._headers_content_type}
+        
+        if self._headers_authorization:
+            headers["Authorization"] = self._headers_authorization
+        
+        try:
+            if self._webhook_method == "POST":
+                response = requests.post(url, headers=headers, data=json.dumps(self._data))
+            elif self._webhook_method == "GET":
+                response = requests.get(url, headers=headers, params=self._data)
+            else:
+                raise ValueError(f"Unsupported HTTP method: {self._webhook_method}")
+            
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            print(f"Error calling webhook: {e}")
+            return None
     
     @abstractmethod
-    def teardown(self) -> None:
+    def _set_tool_data(self, **kwargs) -> None:
         """
-        Abstract method to clean up resources after execution.
+        Abstract method to set the tool data.
         Must be implemented by subclasses.
         """
         pass
+    
+    # @abstractmethod
+    # def teardown(self) -> None:
+    #     """
+    #     Abstract method to clean up resources after execution.
+    #     Must be implemented by subclasses.
+    #     """
+    #     pass
