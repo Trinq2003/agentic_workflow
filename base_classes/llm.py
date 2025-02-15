@@ -1,10 +1,11 @@
 from abc import ABC, abstractmethod
 from typing import List, Dict, Union, Any, Iterable, Self
 import logging
-from openai.types.chat import ChatCompletionMessageParam, ChatCompletion
+from openai.types.chat import ChatCompletion
 from openai import OpenAI
 
 from configuration.llm_inference_configuration import LLMConfiguration
+from base_classes.prompt import AbstractPrompt
 
 class AbstractLanguageModel(ABC):
     """
@@ -146,7 +147,7 @@ class AbstractLanguageModel(ABC):
         """
         return self._query_call_count
     
-    def query(self, query: Iterable[ChatCompletionMessageParam], num_responses: int = 1) -> ChatCompletion:
+    def query(self, query: AbstractPrompt, num_responses: int = 1) -> ChatCompletion:
         """
         Abstract method to query the language model.
 
@@ -161,7 +162,7 @@ class AbstractLanguageModel(ABC):
         return self._query(query, num_responses)
 
     @abstractmethod
-    def _query(self, query: Iterable[ChatCompletionMessageParam], num_responses: int = 1) -> ChatCompletion:
+    def _query(self, query: AbstractPrompt, num_responses: int = 1) -> ChatCompletion:
         """
         Abstract method to query the language model.
 

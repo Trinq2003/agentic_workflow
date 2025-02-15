@@ -83,14 +83,8 @@ class AbstractOperator(ABC):
         return cls._operator_instances_by_id.get(operator_id, None)
 
     @abstractmethod
-    def run(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def run(self, **kwargs) -> Any:
         """
         Run the operator on the input data.
-
-        :param data: The input data.
-        :type data: Dict[str, Any]
-
-        :return: The output data.
-        :rtype: Dict[str, Any]
         """
         pass

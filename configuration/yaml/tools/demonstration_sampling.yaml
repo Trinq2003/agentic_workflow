@@ -7,3 +7,5 @@ headers:
   authorization: "Bearer your-api-key-here"
 
 payload:
+  message:
+    type: 'str'
