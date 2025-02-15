@@ -13,14 +13,14 @@ class DemonstrationSamplingTool(AbstractTool):
     def __init__(self, tool_config: ToolConfiguration) -> None:
         super().__init__(tool_config = tool_config)
         
-    def _set_tool_data(self, user_message: UserMessagePrompt) -> None:
-        self._data = {'message': user_message.text}
+    def _set_tool_data(self, input_message: UserMessagePrompt) -> None:
+        self._data = {'message': input_message.text}
     
-    def execute(self, user_message: UserMessagePrompt) -> List[Dict[str, Any]]:
+    def execute(self, input_message: UserMessagePrompt) -> List[Dict[str, Any]]:
         """
         This method is used to execute the demonstration sampling of the CoT operator.
         
         :return: A list of sample demonstrations (pre-defined QnA pairs).
         :rtype: List[Dict[str, Any]]
         """
-        super().execute(user_message)
+        super().execute(input_message = input_message)
