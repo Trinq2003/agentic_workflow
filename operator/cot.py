@@ -2,12 +2,13 @@ from openai.types.chat import ChatCompletion, ChatCompletionMessageParam
 from typing import Union
 
 from base_classes.operator import AbstractOperator
-from configuration.operator_configuration import OperatorConfiguration
+from configuration.operator_configuration import CoTOperatorConfiguration
 from base_classes.tool import AbstractTool
 from base_classes.llm import AbstractLanguageModel
 from prompt.user_message import UserMessagePrompt
 from prompt.few_shot import FewShotPrompt
 from prompt.assistant_message import AssistantMessagePrompt
+from tools.demonstration_sampling import DemonstrationSamplingTool
 
 class CoTOperator(AbstractOperator):
     """
@@ -17,11 +18,12 @@ class CoTOperator(AbstractOperator):
     Args:
         AbstractOperator (_type_): _description_
     """
-    _construct_cot_tool: AbstractTool = None
+    _config: CoTOperatorConfiguration = None
+    _construct_cot_tool: DemonstrationSamplingTool = None
     _cot_llm: AbstractLanguageModel = None
-    def __init__(self, config: OperatorConfiguration) -> None:
+    def __init__(self, config: CoTOperatorConfiguration) -> None:
         super().__init__(config = config)
-        self._construct_cot_tool = self._tool_component[0] # Only 1 tool component is allowed for CoT operator 
+        self._construct_cot_tool = self._tool_component[0] # Only 1 tool component is allowed for CoT operator. This tool is used to construct the CoT prompt.
         self._cot_llm = self._llm_component[0] # Only 1 LLM component is allowed for CoT operator
         
     def _demonstration_sampling(self, input_message: Union[UserMessagePrompt, AssistantMessagePrompt]) -> FewShotPrompt:
