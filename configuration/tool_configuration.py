@@ -28,7 +28,7 @@ class ToolConfiguration(Configuration):
             ['tool_id', '', str],  # ID of the tool
             ['webhook.base_url', '', str],  # Base URL for the webhook
             ['webhook.webhook_path', '', str],  # Path to the webhook
-            ['webhook.method', '', str] # HTTP method for the webhook
-            ['headers.contenttype', 'application/json', str]  # Headers for the webhook
-            ['headers.authorization', '', str]  # Authorization headers for the webhook
+            ['webhook.method', '', str], # HTTP method for the webhook
+            ['headers.content_type', 'application/json', str],  # Headers for the webhook
+            ['headers.authorization', '', str],  # Authorization headers for the webhook
         ]

@@ -12,8 +12,8 @@ class AbstractTool(ABC):
     """
     _config: ToolConfiguration = None
     _tool_id: str = None
-    _list_of_tool_ids: List[str] = None
-    _tool_instances_by_id: Dict[str, Self] = None
+    _list_of_tool_ids: List[str] = []
+    _tool_instances_by_id: Dict[str, Self] = {}
     _data: Any = None
     
     _webhook_base_url: str = None
@@ -78,11 +78,11 @@ class AbstractTool(ABC):
         self._config = tool_config
         self.logger.debug(f"Config loaded.")
 
-    def execute(self, **kwargs) -> Union[Dict[str, Any], None, List[Dict[str, Any]]]:
+    def execute(self, **kwargs) -> Any:
         """
         Abstract method to execute the tool.
         """
-        self._set_tool_data(self, **kwargs)
+        self._set_tool_data(**kwargs)
         
         url = f"{self._webhook_base_url}/{self._webhook_webhook_path}"
         headers = {"Content-Type": self._headers_content_type}
