@@ -14,15 +14,15 @@ class AbstractLanguageModel(ABC):
     _llm_model: OpenAI = None
     _config: LLMConfiguration = None
     _llm_id: str = None
-    _list_of_llm_ids: List[str] = None
-    _llm_instances_by_id: Dict[str, Self] = None
+    _list_of_llm_ids: List[str] = []
+    _llm_instances_by_id: Dict[str, Self] = {}
     
     _model_name: str = None
     _temperature: float = None
     _max_tokens: int = None
     _cache: bool = None
     _cache_expiry: int = None
-    _response_cache: Dict[str, List[Any]] = None
+    _response_cache: Dict[str, List[Any]] = {}
     prompt_tokens: int = None
     completion_tokens: int = None
     cost: float = None
@@ -53,6 +53,8 @@ class AbstractLanguageModel(ABC):
         self.cost: float = 0.0
 
         self._query_call_count: int = 0
+        
+        self._load_model()
         
         if self._llm_id in self.__class__._list_of_llm_ids:
             raise ValueError(f"LLM ID {self._llm_id} is already initiated.")
@@ -175,14 +177,16 @@ class AbstractLanguageModel(ABC):
         """
         pass
 
-    @abstractmethod
-    def get_response_texts(self, query_responses: Union[List[ChatCompletion], ChatCompletion]) -> List[str]:
+    def get_response_texts(self, query_responses: ChatCompletion) -> List[str]:
         """
-        Abstract method to extract response texts from the language model's response(s).
+        Extract response texts from the language model's response(s).
 
         :param query_responses: The responses returned from the language model.
-        :type query_responses: Union[List[Any], Any]
+        :type query_responses:  ChatCompletion.
         :return: List of textual responses.
         :rtype: List[str]
         """
-        pass
+        response_texts = []
+        for response in query_responses.choices:
+            response_texts.append(response.message.content)
+        return response_texts
