@@ -1,4 +1,4 @@
-from typing import Required, Optional
+from typing import Optional
 
 from base_classes.configuration import Configuration
 

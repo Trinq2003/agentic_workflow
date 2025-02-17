@@ -1,6 +1,5 @@
 /.vscodegit 
 *.env
 **/__pycache__/
-/kg_construction/
 /starting_code/
-/orbit_backup/
+**.yaml

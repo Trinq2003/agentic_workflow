@@ -1,13 +1,13 @@
 import requests
 from typing import Any, List, Union, Iterable
-from openai import OpenAI
+from openai import OpenAI, AzureOpenAI
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletion
 from configuration.llm_inference_configuration import APILLMConfiguration
 from abc import ABC, abstractmethod
 
 from base_classes.llm import AbstractLanguageModel
 
-class RequestLLM(AbstractLanguageModel):
+class AzureOpenAILLM(AbstractLanguageModel):
     """
     RequestLLM is a concrete implementation of AbstractLanguageModel for querying a VLLM model.
     It communicates with the model using HTTP requests.
@@ -37,12 +37,13 @@ class RequestLLM(AbstractLanguageModel):
         }
         try:
             # Send a minimal POST request to check the service health
-            response = requests.post(self._config.llm_api_api_base, headers=headers, json=payload, timeout=5)
+            response = requests.post(f"{self._config.llm_api_api_base}/openai/deployments/{self._config.model_model_name}/chat/completions?api-version={self._config.llm_api_api_version}", headers=headers, json=payload, timeout=5)
 
             if response.status_code == 200:
-                self._llm_model = OpenAI(
-                    base_url=self._config.llm_api_api_base,
+                self._llm_model = AzureOpenAI(
+                    azure_endpoint=self._config.llm_api_api_base,
                     api_key=self._config.llm_api_api_key,
+                    api_version=self._config.llm_api_api_version,
                     max_retries=self._config.retry_max_retries
                 )
                 print(f"✅ Model loaded successfully: {self._model_name}")
@@ -73,7 +74,7 @@ class RequestLLM(AbstractLanguageModel):
                 n=num_responses  # Number of responses to return
             )
             
-            return response["choices"]  # Return the list of responses
+            return response  # Return the list of responses
         except Exception as e:
             self.logger.error(f"Error querying OpenAI model: {str(e)}")
             return None
