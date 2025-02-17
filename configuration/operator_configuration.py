@@ -30,10 +30,10 @@ class OperatorConfiguration(Configuration):
             ['operator.operator_type', 'CoT', str], # Operator type
             ['operator.enabled', True, bool], # Operator enabled
             ['operator.llm_component', [], list], # LLM component
-            ['operator.tool_component', [], list] # Tool component
-            ['execution.timeout', 60, int] # Execution timeout
-            ['execution.max_retry', 3, int] # Execution retry
-            ['execution.backoff_factor', 2, int] # Execution backoff
+            ['operator.tool_component', [], list], # Tool component
+            ['execution.timeout', 60, int], # Execution timeout
+            ['execution.max_retry', 3, int], # Execution retry
+            ['execution.backoff_factor', 2, int], # Execution backoff
         ]
 
 class CoTOperatorConfiguration(Configuration):
@@ -55,10 +55,10 @@ class CoTOperatorConfiguration(Configuration):
             ['operator.operator_type', 'CoT', str], # Operator type
             ['operator.enabled', True, bool], # Operator enabled
             ['operator.llm_component', [], list], # LLM component
-            ['operator.tool_component', [], list] # Tool component
-            ['execution.timeout', 60, int] # Execution timeout
-            ['execution.max_retry', 3, int] # Execution retry
-            ['execution.backoff_factor', 2, int] # Execution backoff
+            ['operator.tool_component', [], list], # Tool component
+            ['execution.timeout', 60, int], # Execution timeout
+            ['execution.max_retry', 3, int], # Execution retry
+            ['execution.backoff_factor', 2, int], # Execution backoff
         ]
 
 class ReActOperatorConfiguration(Configuration):
@@ -80,8 +80,8 @@ class ReActOperatorConfiguration(Configuration):
             ['operator.operator_type', 'CoT', str], # Operator type
             ['operator.enabled', True, bool], # Operator enabled
             ['operator.llm_component', [], list], # LLM component
-            ['operator.tool_component', [], list] # Tool component
-            ['execution.timeout', 60, int] # Execution timeout
-            ['execution.max_retry', 3, int] # Execution retry
-            ['execution.backoff_factor', 2, int] # Execution backoff
+            ['operator.tool_component', [], list], # Tool component
+            ['execution.timeout', 60, int], # Execution timeout
+            ['execution.max_retry', 3, int], # Execution retry
+            ['execution.backoff_factor', 2, int], # Execution backoff
         ]
