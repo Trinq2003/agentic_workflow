@@ -6,8 +6,9 @@ from openai import OpenAI
 
 from configuration.llm_inference_configuration import LLMConfiguration
 from base_classes.prompt import AbstractPrompt
+from base_classes.system_component import SystemComponent
 
-class AbstractLanguageModel(ABC):
+class AbstractLanguageModel(SystemComponent):
     """
     Abstract base class that defines the interface for all language models.
     """

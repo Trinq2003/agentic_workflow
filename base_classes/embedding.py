@@ -1,17 +1,21 @@
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Self
 import logging
 from torch import Tensor
 
 from configuration.embedding_inference_configuration import EmbeddingModelConfiguration
+from base_classes.system_component import SystemComponent
 
-class AbstractEmbeddingModel(ABC):
+class AbstractEmbeddingModel(SystemComponent):
     """
     Abstract base class that defines the interface for all embedding models.
     """
     _emb_moddel: Any = None
     _config: EmbeddingModelConfiguration = None
     _emb_id: str = None
+    _list_of_emb_ids: List[str] = []
+    _emb_instances_by_id: Dict[str, Self] = {}
+    
     
     _model_name: str = None
     _max_tokens: int = None
@@ -36,6 +40,14 @@ class AbstractEmbeddingModel(ABC):
         self._emb_id: str = self._config.emb_id
 
         self._identical_threshold: float = self._config.model_identical_threshold
+        
+        if self._emb_id in self.__class__._list_of_emb_ids:
+            raise ValueError(f"Embedding ID {self._emb_id} is already initiated.")
+        else:
+            self.__class__._list_of_emb_ids.append(self._emb_id)
+        
+        if self._emb_id in self.__class__._emb_instances_by_id.keys():
+            raise ValueError(f"Embedding ID {self._emb_id} is already initiated.")
 
     @property
     def identical_threshold(self) -> float:

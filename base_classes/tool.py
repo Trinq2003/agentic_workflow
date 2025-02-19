@@ -5,8 +5,9 @@ import requests
 import json
 
 from configuration.tool_configuration import ToolConfiguration
+from base_classes.system_component import SystemComponent
 
-class AbstractTool(ABC):
+class AbstractTool(SystemComponent):
     """
     Abstract base class that defines the interface for all tools.
     """

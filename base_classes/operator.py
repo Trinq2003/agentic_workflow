@@ -3,9 +3,10 @@ from typing import List, Dict, Union, Any, Iterable, Self
 
 from base_classes.llm import AbstractLanguageModel
 from base_classes.tool import AbstractTool
+from base_classes.system_component import SystemComponent
 from configuration.operator_configuration import OperatorConfiguration
 
-class AbstractOperator(ABC):
+class AbstractOperator(SystemComponent):
     """
     Abstract base class that defines the interface for all operators.
     """
@@ -13,8 +14,8 @@ class AbstractOperator(ABC):
     _operator_id: str = None
     _operator_type: str = None
     _enabled: bool = None
-    _list_of_operator_ids: List[str] = None
-    _operator_instances_by_id: Dict[str, Self] = None
+    _list_of_operator_ids: List[str] = []
+    _operator_instances_by_id: Dict[str, Self] = {}
     
     _llm_component: List[AbstractLanguageModel] = None
     _tool_component: List[AbstractTool] = None
@@ -43,7 +44,7 @@ class AbstractOperator(ABC):
             if llm_component in list_of_initiated_llm:
                 self._llm_component.append(AbstractLanguageModel.get_llm_instance_by_id(llm_id = llm_component))
             else:
-                raise ValueError(f"LLM ID {llm_component} is not initiated.")
+                raise ValueError(f"❌ LLM ID {llm_component} is not initiated.")
         
         str_tool_component = self._config.operator_tool_component
         list_of_initiated_tool = AbstractTool.get_tool_ids()
@@ -51,15 +52,15 @@ class AbstractOperator(ABC):
             if tool_component in list_of_initiated_tool:
                 self._tool_component.append(AbstractTool.get_tool_instance_by_id(tool_id = tool_component))
             else:
-                raise ValueError(f"Tool ID {tool_component} is not initiated.")
+                raise ValueError(f"❌ Tool ID {tool_component} is not initiated.")
         
         if self._operator_id in self.__class__._list_of_operator_ids:
-            raise ValueError(f"Operator ID {self._operator_id} is already initiated.")
+            raise ValueError(f"❌ Operator ID {self._operator_id} is already initiated.")
         else:
             self.__class__._list_of_operator_ids.append(self._operator_id)
                 
         if self._operator_id in self.__class__._operator_instances_by_id.keys():
-            raise ValueError(f"Operator ID {self._operator_id} is already initiated.")
+            raise ValueError(f"❌ Operator ID {self._operator_id} is already initiated.")
         else:
             self.__class__._operator_instances_by_id[self._operator_id] = self
         
@@ -69,7 +70,7 @@ class AbstractOperator(ABC):
         Get the list of operator IDs.
 
         :return: The list of operator IDs.
-        :rtype: str
+        :rtype: List[str]
         """
         return cls._list_of_operator_ids
     @classmethod
