@@ -1,9 +1,9 @@
 from enum import Enum
 
 class MemoryState(Enum):
-    FREE = 0
-    USED = 1
-    LOCKED = 2
+    FREE = 0 # Free to read and write data
+    USED = 1 # Contains data and was used by at least a system component
+    LOCKED = 2 # Locked, no system component can write data
 
 class AccessPermission(Enum):
     NO_ACCESS = 0

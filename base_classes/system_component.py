@@ -21,6 +21,10 @@ class SystemComponent(ABC):
         else:
             self.__class__._list_of_component_ids.append(self._component_id)
     
+    @property
+    def component_id(self) -> str:
+        return self._component_id
+    
     @classmethod
     def get_component_ids(cls) -> List[str]:
         """
@@ -40,3 +44,6 @@ class SystemComponent(ABC):
         :return: The instance if found, otherwise None.
         """
         return cls._component_instances_by_id.get(component_id, None)
+    
+    def __eq__(self, value: Self) -> bool:
+        return self._component_id == value.component_id
