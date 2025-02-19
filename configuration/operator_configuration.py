@@ -50,16 +50,7 @@ class CoTOperatorConfiguration(Configuration):
         """
         Define properties for CoT operator.
         """
-        return [
-            ['operator.operator_id', '', str], # Operator ID
-            ['operator.operator_type', 'CoT', str], # Operator type
-            ['operator.enabled', True, bool], # Operator enabled
-            ['operator.llm_component', [], list], # LLM component
-            ['operator.tool_component', [], list], # Tool component
-            ['execution.timeout', 60, int], # Execution timeout
-            ['execution.max_retry', 3, int], # Execution retry
-            ['execution.backoff_factor', 2, int], # Execution backoff
-        ]
+        return []
 
 class ReActOperatorConfiguration(Configuration):
     """
@@ -75,13 +66,4 @@ class ReActOperatorConfiguration(Configuration):
         """
         Define properties for CoT operator.
         """
-        return [
-            ['operator.operator_id', '', str], # Operator ID
-            ['operator.operator_type', 'CoT', str], # Operator type
-            ['operator.enabled', True, bool], # Operator enabled
-            ['operator.llm_component', [], list], # LLM component
-            ['operator.tool_component', [], list], # Tool component
-            ['execution.timeout', 60, int], # Execution timeout
-            ['execution.max_retry', 3, int], # Execution retry
-            ['execution.backoff_factor', 2, int], # Execution backoff
-        ]
+        return []

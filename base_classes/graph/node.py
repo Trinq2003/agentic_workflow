@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import Optional, List, Dict, Self
 
-class AbstractGraphNode:
+class AbstractGraphNode(ABC):
     _node_id: int
-    _list_of_node_ids: List[int] = None
-    _node_instances_by_id: Dict[str, Self] = None
+    _list_of_node_ids: List[int] = []
+    _node_instances_by_id: Dict[str, Self] = []
     _description: Optional[str] = None
     def __init__(self, description: str = '',  **kwargs) -> None:
         self._node_id = self.__class__._list_of_node_ids[-1] + 1 if self.__class__._list_of_node_ids else 0

@@ -3,6 +3,8 @@ import yaml
 from typing import Any, Dict, List
 
 class Configuration(ABC):
+    _properties: Dict[str, Dict[str, Any]]
+    _sensitive_properties: List[str]
     def __init__(self):
         self._properties = dict()
         properties = self._init_properties()
@@ -18,7 +20,7 @@ class Configuration(ABC):
         self._sensitive_properties: List[str] = []  # Define sensitive properties
 
     @property
-    def sensitive_properties(self):
+    def sensitive_properties(self) -> List[str]:
         return self._sensitive_properties
 
     @sensitive_properties.setter
