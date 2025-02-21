@@ -6,19 +6,30 @@ from enum import Enum
 from typing import List, Dict, Optional, Any, Self, Literal
 from functools import lru_cache
 
-from base_classes.memory.management_term import MemoryState, AccessPermission, MemoryType
+from base_classes.memory.management_term import MemoryState, AccessPermission
 from base_classes.system_component import SystemComponent
 
 @dataclass
 class AbstractMemoryAtom(ABC):
-    """Hierarchical memory unit combining architectural and agentic features"""
+    """
+    Represents the smallest indivisible unit of memory within a hierarchical memory system. 
+    The data contained within an AbstractMemoryAtom is treated as an atomic entity from various perspectives.
+
+    Example forms of memory atoms:
+    - From the operator's inner perspective:
+        - User's input prompt
+        - Assistant's response
+        - A thinking step
+        - A tool execution process
+    - From the system's perspective:
+        - Operator response
+    """
     _mem_atom_id: uuid.UUID # Globlally unique identifier
     _address: str # Relative address in the memory block
     _data: Any # Data stored in the memory atom
     _access_count: int
     _last_accessed: datetime
     _last_write: datetime
-    _permission: Dict[str, AccessPermission] # Access permissions for different system components
     _state: MemoryState
     _required_atom: List[uuid.UUID] # List of memory atoms required for this atom to function
     _requiring_atom: List[uuid.UUID] # List of memory atoms requiring this atom to function
@@ -27,19 +38,6 @@ class AbstractMemoryAtom(ABC):
     _list_of_mematom_ids: List[uuid.UUID] = []
     _mematom_instances_by_id: Dict[str, Self] = {}
     def __init__(self, address: int, data: Any, required_atom: List[uuid.UUID], requiring_atom: List[uuid.UUID]):
-        """
-        Represents the smallest indivisible unit of memory within a hierarchical memory system. 
-        The data contained within an AbstractMemoryAtom is treated as an atomic entity from various perspectives.
-
-        Example forms of memory atoms:
-        - From the operator's inner perspective:
-            - User's input prompt
-            - Assistant's response
-            - A thinking step
-            - A tool execution process
-        - From the system's perspective:
-            - Operator response
-        """
         self._mem_atom_id: uuid.UUID = uuid.uuid4()
         self._address: str = address
         self._data: Any = data
@@ -48,7 +46,6 @@ class AbstractMemoryAtom(ABC):
         self._access_count: int = 0
         self._last_accessed: datetime = datetime.now()
         self._last_write: datetime = self._last_accessed
-        self._permission: Dict[str, AccessPermission] = {}
         self._state: MemoryState = MemoryState.USED
         
         self._init_identifying_features()
@@ -73,9 +70,6 @@ class AbstractMemoryAtom(ABC):
     @property
     def last_write(self):
         return self._last_write
-    @property
-    def permission(self):
-        return self._permission
     @property
     def state(self):
         return self._state
@@ -118,11 +112,9 @@ class AbstractMemoryAtom(ABC):
     def read(self, requester: SystemComponent) -> Any:
         """Read data from the memory instance.
         """
-        if self._check_permission(requester) > AccessPermission.NO_ACCESS:
-            self._update_access()
-            return self._data
-        raise PermissionError(f"❌ {requester} lacks read permissions")
-
+        self._update_access()
+        return self._data
+    
     def append_write(self, requester: SystemComponent, data: Any):
         """Append data to the memory instance without changing the existing data.
 
@@ -133,10 +125,8 @@ class AbstractMemoryAtom(ABC):
         Raises:
             PermissionError: If the requester lacks append writing permissions.
         """
-        if self._check_permission(requester) >= AccessPermission.APPEND_ONLY:
-            self._update_access()
-            self._append_data(data)
-        raise PermissionError(f"❌ {requester} lacks append writing permissions")
+        self._update_access()
+        self._append_data(data)
     
     def over_write(self, requester: SystemComponent, data: Any):
         """Overwrite existing data with the new one.
@@ -148,18 +138,8 @@ class AbstractMemoryAtom(ABC):
         Raises:
             PermissionError: If the requester lacks append writing permissions.
         """
-        if self._check_permission(requester) >= AccessPermission.READ_WRITE:
-            self._update_access()
-            self._data = data
-        raise PermissionError(f"❌ {requester} lacks overwriting permissions")
-    
-    def _check_permission(self, requester: SystemComponent) -> AccessPermission:
-        """Return the access permission level for the requester for this memory instance.
-
-        Args:
-            requester (SystemComponent): The system component requesting access (agent, tool, operator, ...).
-        """
-        return self._permission.get(requester.component_id, AccessPermission.NO_ACCESS)
+        self._update_access()
+        self._data = data
     
     @abstractmethod
     def _append_data(self, new_data: Any) -> None:
