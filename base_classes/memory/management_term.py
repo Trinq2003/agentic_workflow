@@ -5,16 +5,11 @@ class MemoryState(Enum):
     USED = 1 # Contains data and was used by at least a system component
     LOCKED = 2 # Locked, no system component can write data
 
-class AccessPermission(Enum):
-    NO_ACCESS = 0
-    READ_ONLY = 1
-    APPEND_ONLY = 2
-    READ_WRITE = 3
-    EXECUTE = 4
-    OWNER = 5
-
 class MemoryType(Enum):
-    USER_INPUT = 1
-    AGENT_THOUGHT = 2
-    TOOL_OUTPUT = 3
-    KNOWLEDGE = 4
+    LOWER_READ_HIGHER_READ = 1
+    LOWER_WRITE_HIGHER_READ = 2
+    LOWER_READ_HIGHER_NO_ACCESS = 3
+    LOWER_WRITE_HIGHER_NO_ACCESS = 4
+    LOWER_NO_ACCESS_HIGHER_WRITE = 5
+    LOWER_READ_HIGHER_WRITE = 6
+    LOWER_WRITE_HIGHER_WRITE = 7
