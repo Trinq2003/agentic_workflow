@@ -8,6 +8,7 @@ from functools import lru_cache
 
 from base_classes.memory.management_term import MemoryState, AccessPermission
 from base_classes.system_component import SystemComponent
+from base_classes.memory.datatypes.data_item import PromptDataItem
 
 @dataclass
 class AbstractMemoryAtom(ABC):
@@ -26,29 +27,26 @@ class AbstractMemoryAtom(ABC):
     """
     _mem_atom_id: uuid.UUID # Globlally unique identifier
     _address: str # Relative address in the memory block
-    _data: Any # Data stored in the memory atom
+    _data: PromptDataItem # Data stored in the memory atom
     _access_count: int
     _last_accessed: datetime
     _last_write: datetime
     _state: MemoryState
     _required_atom: List[uuid.UUID] # List of memory atoms required for this atom to function
     _requiring_atom: List[uuid.UUID] # List of memory atoms requiring this atom to function
-    _identifying_features: Any
 
     _list_of_mematom_ids: List[uuid.UUID] = []
     _mematom_instances_by_id: Dict[str, Self] = {}
-    def __init__(self, address: int, data: Any, required_atom: List[uuid.UUID], requiring_atom: List[uuid.UUID]):
+    def __init__(self, address: int, data: PromptDataItem, required_atom: List[uuid.UUID], requiring_atom: List[uuid.UUID]):
         self._mem_atom_id: uuid.UUID = uuid.uuid4()
         self._address: str = address
-        self._data: Any = data
+        self._data: PromptDataItem = data
         self._required_atom: List[uuid.UUID] = required_atom
         self._requiring_atom: List[uuid.UUID] = requiring_atom
         self._access_count: int = 0
         self._last_accessed: datetime = datetime.now()
         self._last_write: datetime = self._last_accessed
         self._state: MemoryState = MemoryState.USED
-        
-        self._init_identifying_features()
         
         if self._mem_atom_id in self.__class__._mematom_instances_by_id.keys():
             raise ValueError(f"❌ Memory Atom ID {self._mem_atom_id} is already initiated.")
@@ -140,6 +138,17 @@ class AbstractMemoryAtom(ABC):
         """
         self._update_access()
         self._data = data
+        
+    def __str__(self):
+        # TODO: Change the wording method
+        data_str = str(self._data)
+        requiring_id_str = str([str(requiring_id) for requiring_id in self._requiring_atom])
+        required_id_str = str([str(required_id) for required_id in self._required_atom])
+        
+        prefix = f"At {self._last_accessed}, the following message (ID: {self._mem_atom_id}) was created as a response to messages {requiring_id_str}\n\t"
+        suffix = f"This message also leads to messages {required_id_str}.\n"
+        
+        return prefix + data_str + suffix
     
     @abstractmethod
     def _append_data(self, new_data: Any) -> None:
@@ -149,17 +158,4 @@ class AbstractMemoryAtom(ABC):
             new_data (Any): Piece of data to append to the memory instance.
         """
         pass
-    
-    @abstractmethod
-    def _init_identifying_features(self) -> None:
-        """
-        Compile fast access distinctive identifying features from existing data 
-        """
-        pass
-    
-    @abstractmethod
-    def _update_identifying_features(self) -> None:
-        """
-        Update identifying features with new data
-        """
         

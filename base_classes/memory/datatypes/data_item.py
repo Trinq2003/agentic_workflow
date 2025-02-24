@@ -9,8 +9,8 @@ from base_classes.operator import AbstractOperator
 
 class AbstractDataItem(ABC):
     _content: Any
-    _created_timestamp: datetime
     _source: SystemComponent
+    _created_timestamp: datetime
     
     def __init__(self, content: Any, source: SystemComponent):
         self._content = content
@@ -27,19 +27,40 @@ class AbstractDataItem(ABC):
     def source(self) -> SystemComponent:
         return self._source    
     
+    @abstractmethod
+    def __str__(self) -> str:
+        pass
     
 class PromptDataItem(AbstractDataItem):
     _content: AbstractPrompt
-    def __init__(self, content: AbstractPrompt, source: SystemComponent):
-        super().__init__(content, source)
-
-class OperatorDataItem(PromptDataItem):
-    _source: AbstractOperator
+    _source: SystemComponent
     def __init__(self, content: AbstractPrompt, source: SystemComponent):
         super().__init__(content, source)
         
+    def __str__(self) -> str:
+        prompt = self._content.prompt
+        formatted_messages = []
+        for index, message in enumerate(prompt):
+            role = message.role
+            content = message.content
+            if role == "system": prefix = f"Message {index + 1}. System message: \n\t"
+            if role == "user": prefix = f"Message {index + 1}. User message: \n\t"
+            if role == "developer": prefix = f"Message {index + 1}. Developer message: \n\t"
+            if role == "assistant": prefix = f"Message {index+1}. Assistant response: \n\t"
+            if role == "tool": prefix = f"Message {index+1}. Tool execution result: \n\t"
+            formatted_messages.append(prefix + content)
+        
+        return "\n".join(formatted_messages)
+
+class OperatorDataItem(PromptDataItem):
+    _content: AbstractPrompt
+    _source: AbstractOperator
+    def __init__(self, content: AbstractPrompt, source: AbstractOperator):
+        super().__init__(content, source)
+        
 class LLMDataItem(PromptDataItem):
+    _content: AbstractPrompt
     _source: AbstractLanguageModel
-    def __init__(self, content: AbstractPrompt, source: SystemComponent):
+    def __init__(self, content: AbstractPrompt, source: AbstractLanguageModel):
         super().__init__(content, source)
     

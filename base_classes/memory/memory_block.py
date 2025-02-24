@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import uuid
-from typing import Dict, List, Self
+from typing import Dict, List, Self, Any
 from dataclasses import dataclass
 from functools import lru_cache
 import time
@@ -23,6 +23,8 @@ class AbstractMemoryBlock(ABC):
     _memory_atoms: List[AbstractMemoryAtom] = []
     _mem_atom_graph: Dict[uuid.UUID, List[uuid.UUID]] = {} # Graph of memory atoms and their dependencies
     _block_memory_type: MemoryType
+    _block_address_in_memory: Dict[str, Any] = {}
+    identifying_features: Dict[str, Any] = {}
     
     _list_of_memblock_ids: List[uuid.UUID] = []
     _memblock_instances_by_id: Dict[str, Self] = {}
@@ -45,6 +47,12 @@ class AbstractMemoryBlock(ABC):
     @property
     def mem_atom_graph(self) -> Dict[uuid.UUID, List[uuid.UUID]]:
         return self._mem_atom_graph
+    @property
+    def block_address_in_memory(self) -> Dict[str, Any]:
+        return self._block_address_in_memory
+    @block_address_in_memory.setter
+    def block_address_in_memory(self, block_address: Dict[str, Any]) -> None:
+        self._block_address_in_memory = block_address
     
     @classmethod
     def get_memblock_ids(cls) -> List[uuid.UUID]:
@@ -71,6 +79,18 @@ class AbstractMemoryBlock(ABC):
             raise ValueError(f"❌ Memory Atom with ID {memory_atom.mem_atom_id} had already existed in Memory Block {self._mem_block_id}.")
         else:
             self._memory_atoms.append(AbstractMemoryAtom.get_mematom_instance_by_id(memory_atom.mem_atom_id))
+    
+    def __str__(self):
+        memory_block_str = []
+        for memory_atom in self._memory_atoms:
+            memory_atom_str = str(memory_atom)
+            memory_block_str.append(memory_atom_str)
+            
+        prefix = f"Memory Block ID: {str(self._mem_block_id)}. This represents a chain of conversations or actions.\n"
+        content = f"The content of this memory block is as follows:\n{'\n'.join(memory_block_str)}"
+        suffix = ""
+        
+        return prefix + content + suffix
                 
     @abstractmethod
     def get_memory_atom(self, requester: SystemComponent, mem_atom_id: uuid.UUID) -> AbstractMemoryAtom:
