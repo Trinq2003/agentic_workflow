@@ -1,49 +1,42 @@
-from base_classes.graph.node import AbstractGraphNode
+from typing import List, Any
+
+from base_classes.graph.node import MemoryRequiredGraphNode, SystemComponentGraphNode
 from base_classes.tool import AbstractTool
 from base_classes.operator import AbstractOperator
 from base_classes.llm import AbstractLanguageModel
+from base_classes.prompt import AbstractPrompt
+from memory.operator.operator_memory import OperatorMemory
 
-class InnerOperatorNode(AbstractGraphNode):
-    """
-    This class is used to represent an inner operator node in the graph.
-    """
-    _container_operator_id: str = None
-    _container_operator: AbstractOperator = None
-    def __init__(self, container_operator_id: str, description: str = '', **kwargs) -> None:
-        super().__init__(description = description)
-        self._container_operator_id = container_operator_id
-        self._container_operator = AbstractOperator.get_operator_instance_by_id(operator_id = self._container_operator_id)
-
-class OperatorNode(AbstractGraphNode):
+class OperatorNode(MemoryRequiredGraphNode):
     """
     This class is used to represent an operator node in the graph.
     """
-    _operator_id: str = None
-    _operator: AbstractOperator = None
-    def __init__(self, operator_id: str, description: str = '') -> None:
-        super().__init__(description = description)
-        self._operator_id = operator_id
-        self._operator = AbstractOperator.get_operator_instance_by_id(operator_id = operator_id)
+    system_component: AbstractOperator
+    memory: OperatorMemory
+    def __init__(self, system_component: AbstractOperator, memory: OperatorMemory, **kwargs) -> None:
+        super().__init__(system_component=system_component, memory=memory, **kwargs)
         
-class LLMNode(InnerOperatorNode):
+    def execute(self, input: AbstractPrompt, **kwargs):
+        operator_response = self.system_component.run(input_message=input, **kwargs)
+        
+class LLMNode(SystemComponentGraphNode):
     """
     This class is used to represent a language model node in the graph.
     """
-    _llm_id: str = None
-    _llm: AbstractLanguageModel = None
-    def __init__(self, llm_id: str, container_operator_id: str, description: str = '') -> None:
-        super().__init__(container_operator_id = container_operator_id, description = description)
-        self._llm_id = llm_id
-        self._llm = AbstractLanguageModel.get_llm_instance_by_id(llm_id = llm_id)
+    system_component: AbstractLanguageModel
+    def __init__(self, system_component: AbstractLanguageModel, **kwargs) -> None:
+        super().__init__(system_component, **kwargs)
         
-class ToolNode(InnerOperatorNode):
-    """
-    This class is used to represent a tool node in the graph.
-    """
-    _tool_id: str = None
-    _tool: AbstractTool = None
-    def __init__(self, tool_id: str, container_operator_id: str, description: str = '') -> None:
-        super().__init__(container_operator_id = container_operator_id, description = description)
-        self._tool_id = tool_id
-        self._tool = AbstractTool.get_tool_instance_by_id(tool_id = tool_id)
+    def execute(self, input: AbstractPrompt) -> List[AbstractPrompt]:
+        raw_llm_response = self.system_component.query(prompt=input, num_responses=1)
+        llm_text_response = self.system_component.get_response_texts(query_responses=raw_llm_response)[0]
         
+        llm_text_response_dict = [{
+            'role': 'assistant',
+            'content': llm_text_response
+        }]
+        
+        response_prompt = AbstractPrompt(prompt=llm_text_response_dict)
+        history = [input, response_prompt]
+        
+        return history

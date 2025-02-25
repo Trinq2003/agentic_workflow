@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Dict, Union, Any, Iterable, Self
 
+from base_classes.prompt import AbstractPrompt
 from base_classes.llm import AbstractLanguageModel
 from base_classes.tool import AbstractTool
 from base_classes.system_component import SystemComponent
@@ -84,7 +85,7 @@ class AbstractOperator(SystemComponent):
         return cls._operator_instances_by_id.get(operator_id, None)
 
     @abstractmethod
-    def run(self, **kwargs) -> Any:
+    def run(self, input_message: AbstractPrompt, **kwargs) -> Any:
         """
         Run the operator on the input data.
         """
