@@ -43,3 +43,4 @@ class CoTOperator(AbstractOperator):
         cot_answer: ChatCompletionMessageParam = cot_query_answer.choices[0].message
         
         return AssistantMessagePrompt(cot_answer)
+    
