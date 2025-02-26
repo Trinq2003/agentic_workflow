@@ -9,6 +9,9 @@ from prompt.user_message import UserMessagePrompt
 from prompt.few_shot import FewShotPrompt
 from prompt.assistant_message import AssistantMessagePrompt
 from tools.demonstration_sampling import DemonstrationSamplingTool
+from base_classes.memory.memory_atom import AbstractMemoryAtom
+from base_classes.memory.memory_block import AbstractMemoryBlock
+from base_classes.memory.datatypes.data_item import PromptDataItem
 
 class CoTOperator(AbstractOperator):
     """
@@ -36,11 +39,20 @@ class CoTOperator(AbstractOperator):
         """
         This method is used to run the CoT operator.
         """
+        history_memory_block: AbstractMemoryBlock = AbstractMemoryBlock()
+        history_memory_block.add_memory_atom(AbstractMemoryAtom(data = PromptDataItem(content = input_message, source = "user")))
+        input_message.prompt[0]["content"] = input_message.prompt[0]["content"] + "\nLet's think step by step.\n"
+        
         demonstration_samples: FewShotPrompt = self._demonstration_sampling(input_message = input_message)
-        final_cot_prompt = demonstration_samples.prompt.append(input_message.prompt)
+        history_memory_block.add_memory_atom(AbstractMemoryAtom(data = PromptDataItem(content = demonstration_samples, source = self._construct_cot_tool)))
+        
+        final_cot_prompt = demonstration_samples.prompt.append(input_message.prompt[0])
         
         cot_query_answer: ChatCompletion = self._cot_llm.query(prompt = final_cot_prompt, num_responses= 1)
-        cot_answer: ChatCompletionMessageParam = cot_query_answer.choices[0].message
+        cot_answer: AssistantMessagePrompt = AssistantMessagePrompt(cot_query_answer.choices[0].message.content)
+        history_memory_block.add_memory_atom(AbstractMemoryAtom(data = PromptDataItem(content = cot_answer, source = self._cot_llm)))
+        
+        self.memory_block = history_memory_block
         
         return AssistantMessagePrompt(cot_answer)
     
