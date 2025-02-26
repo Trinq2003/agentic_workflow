@@ -6,7 +6,6 @@ from base_classes.llm import AbstractLanguageModel
 from base_classes.embedding import AbstractEmbeddingModel
 from base_classes.memory.memory_block import AbstractMemoryBlock
 from prompt.user_message import UserMessagePrompt
-# from configuration.llm_inference_configuration import LLMConfiguration
 
 class MemoryFeatureEngineer:
     _llm: AbstractLanguageModel

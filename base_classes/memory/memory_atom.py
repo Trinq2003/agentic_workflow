@@ -1,16 +1,10 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 import uuid
 from datetime import datetime
-from enum import Enum
-from typing import List, Dict, Optional, Any, Self, Literal
-from functools import lru_cache
+from typing import List, Dict, Any, Self
 
-from base_classes.memory.management_term import MemoryState, AccessPermission
-from base_classes.system_component import SystemComponent
-from base_classes.memory.datatypes.data_item import PromptDataItem
+from base_classes.memory.management_term import MemoryState
 
-@dataclass
 class AbstractMemoryAtom(ABC):
     """
     Represents the smallest indivisible unit of memory within a hierarchical memory system. 
@@ -26,8 +20,7 @@ class AbstractMemoryAtom(ABC):
         - Operator response
     """
     _mem_atom_id: uuid.UUID # Globlally unique identifier
-    _address: str # Relative address in the memory block
-    _data: PromptDataItem # Data stored in the memory atom
+    _data: Any # Data stored in the memory atom
     _access_count: int
     _last_accessed: datetime
     _last_write: datetime
@@ -37,10 +30,9 @@ class AbstractMemoryAtom(ABC):
 
     _list_of_mematom_ids: List[uuid.UUID] = []
     _mematom_instances_by_id: Dict[str, Self] = {}
-    def __init__(self, address: int, data: PromptDataItem, required_atom: List[uuid.UUID], requiring_atom: List[uuid.UUID]):
+    def __init__(self, data: Any, required_atom: List[uuid.UUID] = [], requiring_atom: List[uuid.UUID] = []):
         self._mem_atom_id: uuid.UUID = uuid.uuid4()
-        self._address: str = address
-        self._data: PromptDataItem = data
+        self._data: Any = data
         self._required_atom: List[uuid.UUID] = required_atom
         self._requiring_atom: List[uuid.UUID] = requiring_atom
         self._access_count: int = 0
@@ -52,13 +44,11 @@ class AbstractMemoryAtom(ABC):
             raise ValueError(f"❌ Memory Atom ID {self._mem_atom_id} is already initiated.")
         else:
             self.__class__._mematom_instances_by_id[self._mem_atom_id] = self
+            self.__class__._list_of_mematom_ids.append(self._mem_atom_id)
 
     @property
     def mem_atom_id(self):
         return self._mem_atom_id
-    @property
-    def address(self):
-        return self._address
     @property
     def access_count(self):
         return self._access_count
@@ -103,41 +93,41 @@ class AbstractMemoryAtom(ABC):
         """
         return cls._mematom_instances_by_id.get(mem_atom_id, None)
 
-    def _update_access(self):
-        self._last_accessed = datetime.now()
-        self._access_count += 1
+    # def _update_access(self):
+    #     self._last_accessed = datetime.now()
+    #     self._access_count += 1
 
-    def read(self, requester: SystemComponent) -> Any:
-        """Read data from the memory instance.
-        """
-        self._update_access()
-        return self._data
+    # def read(self) -> Any:
+    #     """Read data from the memory instance.
+    #     """
+    #     self._update_access()
+    #     return self._data
     
-    def append_write(self, requester: SystemComponent, data: Any):
-        """Append data to the memory instance without changing the existing data.
+    # def append_write(self, data: Any):
+    #     """Append data to the memory instance without changing the existing data.
 
-        Args:
-            requester (Any): The system component requesting access (agent, tool, operator, ...).
-            data (Any): Piece of data to append to the memory instance.
+    #     Args:
+    #         requester (Any): The system component requesting access (agent, tool, operator, ...).
+    #         data (Any): Piece of data to append to the memory instance.
 
-        Raises:
-            PermissionError: If the requester lacks append writing permissions.
-        """
-        self._update_access()
-        self._append_data(data)
+    #     Raises:
+    #         PermissionError: If the requester lacks append writing permissions.
+    #     """
+    #     self._update_access()
+    #     self._append_data(data)
     
-    def over_write(self, requester: SystemComponent, data: Any):
-        """Overwrite existing data with the new one.
+    # def over_write(self, data: Any):
+    #     """Overwrite existing data with the new one.
 
-        Args:
-            requester (Any): The system component requesting access (agent, tool, operator, ...).
-            data (Any): Piece of data to append to the memory instance.
+    #     Args:
+    #         requester (Any): The system component requesting access (agent, tool, operator, ...).
+    #         data (Any): Piece of data to append to the memory instance.
 
-        Raises:
-            PermissionError: If the requester lacks append writing permissions.
-        """
-        self._update_access()
-        self._data = data
+    #     Raises:
+    #         PermissionError: If the requester lacks append writing permissions.
+    #     """
+    #     self._update_access()
+    #     self._data = data
         
     def __str__(self):
         # TODO: Change the wording method
@@ -145,17 +135,17 @@ class AbstractMemoryAtom(ABC):
         requiring_id_str = str([str(requiring_id) for requiring_id in self._requiring_atom])
         required_id_str = str([str(required_id) for required_id in self._required_atom])
         
-        prefix = f"At {self._last_accessed}, the following message (ID: {self._mem_atom_id}) was created as a response to messages {requiring_id_str}\n\t"
-        suffix = f"This message also leads to messages {required_id_str}.\n"
+        prefix = f"At {self._last_accessed}, the following message (ID: {self._mem_atom_id}) was created. The content of message is given below: \n"
+        suffix = f"\nThis message is a response to messages {requiring_id_str} and also leads to messages {required_id_str}.\n"
         
         return prefix + data_str + suffix
-    
-    @abstractmethod
-    def _append_data(self, new_data: Any) -> None:
-        """Append data to the memory instance. This is used in append writing mode.
 
-        Args:
-            new_data (Any): Piece of data to append to the memory instance.
-        """
-        pass
+    # @abstractmethod
+    # def _append_data(self, new_data: Any) -> None:
+    #     """Append data to the memory instance. This is used in append writing mode.
+
+    #     Args:
+    #         new_data (Any): Piece of data to append to the memory instance.
+    #     """
+    #     pass
         

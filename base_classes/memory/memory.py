@@ -12,9 +12,10 @@ class AbstractMemory(ABC):
     
     _list_of_memory_ids: List[uuid.UUID] = []
     _memory_instances_by_id: Dict[str, Self] = {}
-    def __init__(self):
+    def __init__(self, memory_feature_engineer: MemoryFeatureEngineer):
         self._mem_id: uuid.UUID = uuid.uuid4()
         self._memory_blocks: Dict[uuid.UUID, AbstractMemoryBlock] = {}
+        self._memory_fe: MemoryFeatureEngineer = memory_feature_engineer
         
         if self._mem_id in self.__class__._memory_instances_by_id.keys():
             raise ValueError(f"❌ Memory ID {self._mem_id} is already initiated.")
@@ -46,9 +47,9 @@ class AbstractMemory(ABC):
             raise ValueError(f"❌ Memory Block with ID {memory_block.mem_block_id} had already existed in Memory {self._mem_id}.")
         else:
             block_address = self._create_memory_block_allocation_address()
-            memory_block.block_address_in_memory(block_address = block_address)
+            memory_block.block_address_in_memory = block_address
             self._memory_blocks[memory_block.mem_block_id] = AbstractMemoryBlock.get_memblock_instance_by_id(memory_block.mem_block_id)
-            self._memory_fe.memory_feature_engineering(memory_block_id = memory_block.mem_block_id)
+            # self._memory_fe.memory_feature_engineering(memory_block_id = memory_block.mem_block_id)
     
     def remove_memory_block(self, memory_block_id: uuid.UUID) -> None:
         if memory_block_id not in [mb_id for mb_id in self._memory_blocks.keys()]:
