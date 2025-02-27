@@ -5,6 +5,7 @@ from base_classes.prompt import AbstractPrompt
 from base_classes.llm import AbstractLanguageModel
 from base_classes.tool import AbstractTool
 from base_classes.system_component import SystemComponent
+from base_classes.memory.memory_block import AbstractMemoryBlock
 from configuration.operator_configuration import OperatorConfiguration
 
 class AbstractOperator(SystemComponent):
@@ -17,6 +18,7 @@ class AbstractOperator(SystemComponent):
     _enabled: bool = None
     _list_of_operator_ids: List[str] = []
     _operator_instances_by_id: Dict[str, Self] = {}
+    memory_block: AbstractMemoryBlock = None
     
     _llm_component: List[AbstractLanguageModel] = None
     _tool_component: List[AbstractTool] = None
@@ -32,8 +34,8 @@ class AbstractOperator(SystemComponent):
         """
         self._config = config
         
-        self._operator_id = self._config.operator_id
-        self._operator_type = self._config.operator_type
+        self._operator_id = "OPERATOR | " + self._config.operator_operator_id
+        self._operator_type = self._config.operator_operator_type
         self._enabled = self._config.operator_enabled
         self._execution_timeout = self._config.execution_timeout
         self._execution_max_retry = self._config.execution_max_retry

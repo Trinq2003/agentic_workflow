@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
 from openai.types.chat import ChatCompletionMessageParam
-from typing import Iterable
+from typing import List
 
 class AbstractPrompt(ABC):
-    prompt: Iterable[ChatCompletionMessageParam] = None
-    def __init__(self, prompt: Iterable[ChatCompletionMessageParam]) -> None:
+    prompt: List[ChatCompletionMessageParam] = None
+    def __init__(self, prompt: List[ChatCompletionMessageParam]) -> None:
         """
         Initialize the AbstractPrompt instance with the prompt.
 

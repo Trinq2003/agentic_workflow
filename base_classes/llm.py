@@ -39,7 +39,7 @@ class AbstractLanguageModel(SystemComponent):
 
         self.load_config(llm_config)
 
-        self._llm_id: str = self._config.llm_id
+        self._llm_id: str = "LLM | " + self._config.llm_id
         self._model_name: str = self._config.model_model_name
         self._temperature: float = self._config.model_temperature
         self._max_tokens: int = self._config.model_max_tokens
@@ -150,7 +150,7 @@ class AbstractLanguageModel(SystemComponent):
         """
         return self._query_call_count
     
-    def query(self, query: AbstractPrompt, num_responses: int = 1) -> ChatCompletion:
+    def query(self, query: AbstractPrompt, num_responses: int = 1, stop: List[str] = ["\n"]) -> ChatCompletion:
         """
         Abstract method to query the language model.
 
@@ -162,10 +162,10 @@ class AbstractLanguageModel(SystemComponent):
         :rtype: Any
         """
         self._increment_chat_count()
-        return self._query(query, num_responses)
+        return self._query(query = query, num_responses = num_responses, stop = stop)
 
     @abstractmethod
-    def _query(self, query: AbstractPrompt, num_responses: int = 1) -> ChatCompletion:
+    def _query(self, query: AbstractPrompt, num_responses: int = 1, stop: List[str] = ["\n"]) -> ChatCompletion:
         """
         Abstract method to query the language model.
 

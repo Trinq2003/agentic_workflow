@@ -38,7 +38,7 @@ class AbstractTool(SystemComponent):
         self._webhook_method: str = self._config.webhook_method.upper()
         self._headers_content_type: str = self._config.headers_content_type
         self._headers_authorization: str = self._config.headers_authorization
-        self._tool_id: str = self._config.tool_id
+        self._tool_id: str = "TOOL | " + self._config.tool_id
         
         if self._tool_id in self.__class__._list_of_tool_ids:
             raise ValueError(f"Tool ID {self._tool_id} is already initiated.")
