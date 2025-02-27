@@ -13,10 +13,10 @@ class ToolChooserTool(AbstractTool):
     def __init__(self, tool_config: ToolConfiguration) -> None:
         super().__init__(tool_config = tool_config)
         
-    def _set_tool_data(self, input_message: Union[UserMessagePrompt, AssistantMessagePrompt]) -> None:
-        self._data = {'message': input_message.text}
+    def _set_tool_data(self, input_message: str) -> None:
+        self._data = {'message': input_message}
     
-    def execute(self, input_message: Union[UserMessagePrompt, AssistantMessagePrompt]) -> ToolPath:
+    def execute(self, input_message: str) -> List[str]:
         """
         This method is used to execute the tool chooser tool, which returns the tool ID to be used for the given prompt.
         
