@@ -7,8 +7,8 @@ class OperatorConfiguration(Configuration):
     Base configuration class for operator configurations.
     Contains common properties for both local and API-based deployments.
     """
-    operator_id: str
-    operator_type: str
+    operator_operator_id: str
+    operator_operator_type: str
     operator_enabled: bool
     operator_llm_component: List[str]
     operator_tool_component: List[str]
@@ -56,6 +56,9 @@ class ReActOperatorConfiguration(Configuration):
     """
     Configuration class for CoT operator.
     """
+    tool_tool_choser: str
+    tool_callable: List[str]
+    max_iterations: int
     def __init__(self):
         super().__init__()
         sensitive_properties = []
@@ -66,4 +69,8 @@ class ReActOperatorConfiguration(Configuration):
         """
         Define properties for CoT operator.
         """
-        return []
+        return [
+            ['tool.tool_chooser', '', str] # Tool chooser
+            ['tool.callable', [], list], # Callable tools
+            ['max_iterations', 10, int], # Max iterations
+        ]
