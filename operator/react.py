@@ -66,7 +66,7 @@ class ReactOperator(AbstractOperator):
         REACT_MESSAGE = [
             {
                 "role": "system",
-                "content": "You are a helpful assistant who can answer multistep questions by sequentially calling functions. Follow a pattern of THOUGHT (reason step-by-step about which function to call next), ACTION (call a function to as a next step towards the final answer), OBSERVATION (output of the function). Reason step by step which actions to take to get to the answer. Only call functions with arguments coming verbatim from the user or the output of other functions."
+                "content": "You are a helpful assistant who can answer multistep questions by sequentially calling functions. Follow a pattern of THOUGHT (reason step-by-step about which function to call next in <though></though> XML tags), ACTION (call a function to as a next step towards the final answer in <action></action> XML tags), OBSERVATION (output of the function in <observation></observation> XML tags). Reason step by step which actions to take to get to the answer. When you get the result, encloses it inside <finish></finish> XML tag. Only call functions with arguments coming verbatim from the user or the output of other functions."
             },
             {
                 "role": "user",
@@ -74,63 +74,119 @@ class ReactOperator(AbstractOperator):
             },
             {
                 "role": "assistant",
-                "content": "<thought>Thought 1: I need to search Colorado orogeny, find the area that the eastern sector of the Colorado orogeny extends into, then find the elevation range of the area.</thought><action>Action 1: Search[Colorado orogeny]</action>"
+                "content": "<thought>Thought 1: I need to search Colorado orogeny, find the area that the eastern sector of the Colorado orogeny extends into, then find the elevation range of the area.</thought>",
             },
             {
                 "role": "tool",
-                "content": "<observation>Observation 1: The Colorado orogeny was an episode of mountain building (an orogeny) in Colorado and surrounding areas.</observation>"
+                "content": "You can call the following functions: [{{\"wikipedia\": {{\"entity\": {{\"type\": \"string\", \"description\": \"The entity to search for in Wikipedia.\"}}}}}}]",
+                "tool_call_id": "TOOL | tool_chooser"
             },
             {
                 "role": "assistant",
-                "content": "<thought>Thought 2: It does not mention the eastern sector. So I need to look up eastern sector.</thought><action>Action 2: Lookup[eastern sector]</action>"
+                "content": "<action>Action 1: wikipedia[Colorado orogeny]</action>",
+                "tool_calls": [
+                    {
+                        "id": "wikipedia",
+                        "function": {
+                            "arguments": "{{\"entity\": \"Colorado orogeny\"}}",
+                            "name": "wikipedia"
+                        },
+                        "type": "function",
+                    }
+                ]
             },
             {
                 "role": "tool",
-                "content": "<observation>Observation 2: (Result 1 / 1) The eastern sector extends into the High Plains and is called the Central Plains orogeny.</observation>"
+                "content": "<observation>Observation 1: The Colorado orogeny was an episode of mountain building (an orogeny) in Colorado and surrounding areas.</observation>",
+                "tool_call_id": "TOOL | wikipedia"
             },
             {
                 "role": "assistant",
-                "content": "<thought>Thought 3: The eastern sector of Colorado orogeny extends into the High Plains. So I need to search High Plains and find its elevation range.</thought><action>Action 3: Search[High Plains]</action>"
+                "content": "<thought>Thought 2: It does not mention the eastern sector. So I need to look up eastern sector.</thought>"
             },
             {
                 "role": "tool",
-                "content": "<observation>Observation 3: High Plains refers to one of two distinct land regions:</observation>"
+                "content": "You can call the following functions: [{{\"look_up\": {{\"keyword\": {{\"type\": \"string\", \"description\": \"Lookup the keywords in the given text.\"}}}}}}]",
+                "tool_call_id": "TOOL | tool_chooser"
             },
             {
                 "role": "assistant",
-                "content": "<thought>Thought 4: I need to instead search High Plains (United States).</thought><action>Action 4: Search[High Plains (United States)]</action>"
+                "content": "<action>Action 2: look_up[eastern sector]</action>",
+                "tool_calls": [
+                    {
+                        "id": "look_up",
+                        "function": {
+                            "arguments": "{{\"keyword\": \"eastern sector\"}}",
+                            "name": "look_up"
+                        },
+                        "type": "function",
+                    }
+                ]
             },
             {
                 "role": "tool",
-                "content": "<observation>Observation 4: The High Plains are a subregion of the Great Plains. From east to west, the High Plains rise in elevation from around 1,800 to 7,000 ft (550 to 2,130 m).</observation>"
+                "content": "<observation>Observation 2: (Result 1 / 1) The eastern sector extends into the High Plains and is called the Central Plains orogeny.</observation>",
+                "tool_call_id": "TOOL | look_up"
             },
             {
                 "role": "assistant",
-                "content": "<thought>Thought 5: High Plains rise in elevation from around 1,800 to 7,000 ft, so the answer is 1,800 to 7,000 ft.</thought><action>Action 5: Finish[1,800 to 7,000 ft]</action>"
-            },
-            {
-                "role": "user",
-                "content": "Musician and satirist Allie Goertz wrote a song about the \"The Simpsons\" character Milhouse, who Matt Groening named after who?"
-            },
-            {
-                "role": "assistant",
-                "content": "<thought>Thought 1: The question simplifies to \"The Simpsons\" character Milhouse is named after who. I only need to search Milhouse and find who it is named after.</thought><action>Action 1: Search[Milhouse]</action>"
+                "content": "<thought>Thought 3: The eastern sector of Colorado orogeny extends into the High Plains. So I need to search High Plains and find its elevation range.</thought>"
             },
             {
                 "role": "tool",
-                "content": "<observation>Observation 1: Milhouse Mussolini Van Houten is a recurring character in the Fox animated television series The Simpsons voiced by Pamela Hayden and created by Matt Groening.</observation>"
+                "content": "You can call the following functions: [{{\"look_up\": {{\"keyword\": {{\"type\": \"string\", \"description\": \"Lookup the keywords in the given text.\"}}}}}}]",
+                "tool_call_id": "TOOL | tool_chooser"
             },
             {
                 "role": "assistant",
-                "content": "<thought>Thought 2: The paragraph does not tell who Milhouse is named after, maybe I can look up \"named after\".</thought><action>Action 2: Lookup[named after]</action>"
+                "content": "<action>Action 3: look_up[high Plains]</action>",
+                "tool_calls": [
+                    {
+                        "id": "look_up",
+                        "function": {
+                            "arguments": "{{\"keyword\": \"high Plains\"}}",
+                            "name": "look_up"
+                        },
+                        "type": "function",
+                    }
+                ]
             },
             {
                 "role": "tool",
-                "content": "<observation>Observation 2: (Result 1 / 1) Milhouse was named after U.S. president Richard Nixon, whose middle name was Milhous.</observation>"
+                "content": "<observation>Observation 3: High Plains refers to one of two distinct land regions:</observation>",
+                "tool_call_id": "TOOL | look_up"
             },
             {
                 "role": "assistant",
-                "content": "<thought>Thought 3: Milhouse was named after U.S. president Richard Nixon, so the answer is Richard Nixon.</thought><action>Action 3: Finish[Richard Nixon]</action>"
+                "content": "<thought>Thought 4: I need to instead search High Plains (United States).</thought>"
+            },
+            {
+                "role": "tool",
+                "content": "You can call the following functions: [{{\"wikipedia\": {{\"entity\": {{\"type\": \"string\", \"description\": \"The entity to search for in Wikipedia.\"}}}}}}]",
+                "tool_call_id": "TOOL | tool_chooser"
+            },
+            {
+                "role": "assistant",
+                "content": "<action>Action 4: wikipedia[High Plains (United States)]</action>",
+                "tool_calls": [
+                    {
+                        "id": "wikipedia",
+                        "function": {
+                            "arguments": "{{\"entity\": \"High Plains (United States)\"}}",
+                            "name": "wikipedia"
+                        },
+                        "type": "function",
+                    }
+                ]
+            },
+            {
+                "role": "tool",
+                "content": "<observation>Observation 4: The High Plains are a subregion of the Great Plains. From east to west, the High Plains rise in elevation from around 1,800 to 7,000 ft (550 to 2,130 m).</observation>",
+                "tool_call_id": "TOOL | wikipedia"
+            },
+            {
+                "role": "assistant",
+                "content": "<thought>Thought 5: High Plains rise in elevation from around 1,800 to 7,000 ft, so the answer is 1,800 to 7,000 ft.</thought><finish>1,800 to 7,000 ft</finish>"
             },
             {
                 "role": "user",
@@ -143,19 +199,17 @@ class ReactOperator(AbstractOperator):
                 'role': 'assistant',
                 'content': f'<though>Thought {i}: '
             }
-            thought_action_response = self._reasoning_llm.query(prompt = REACT_MESSAGE.append(thought_action), num_responses = 1, stop = [f"\nObservation {i}:"])
-            thought_action_response_text = self._reasoning_llm.get_response_texts(query_responses = thought_action_response)[0]
-            action = thought_action_response_text.split("<action>")[1].split("</action>")[0]
-            REACT_MESSAGE.append({
-                'role': 'assistant',
-                'content': f'<action>{action}</action>'
-            })
+            thought_response = self._reasoning_llm.query(prompt = REACT_MESSAGE.append(thought_action), num_responses = 1, stop = [f"<action>"])
+            thought_response_str = self._reasoning_llm.get_response_texts(query_responses = thought_response)[0]
+            if 'finish' in thought_response_str.lower():
+                break
             
-            observation = self._get_observation_by_executing_tool(input_message = action)
-            REACT_MESSAGE.append({
-                'role': 'tool',
-                'content': f'<observation>{observation}</observation>'
-            })
+            tool_chooser_response: Dict = self._tool_chooser.execute(input_message = thought_response_str)
+            REACT_MESSAGE.append(tool_chooser_response)
+            action = self._reasoning_llm.query(prompt = REACT_MESSAGE.append({'role': 'assistant', 'content': f'<action>Action {i}:'}), num_responses = 1, stop = [f"<observation>"])
+            tool_calls_response = action['tool_calls']
+            tool_observations: Dict = self._get_observation_by_executing_tool(input_message = tool_calls_response)
+            REACT_MESSAGE.append(tool_observations)
         
         
         return AssistantMessagePrompt(input_message.prompt)
