@@ -16,7 +16,7 @@ class ToolChooserTool(AbstractTool):
     def _set_tool_data(self, input_message: str) -> None:
         self._data = {'message': input_message}
     
-    def execute(self, input_message: str) -> List[str]:
+    def execute(self, input_message: str) -> List[Dict]:
         """
         This method is used to execute the tool chooser tool, which returns the tool ID to be used for the given prompt.
         

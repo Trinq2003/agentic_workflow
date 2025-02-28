@@ -6,9 +6,13 @@ import json
 from base_classes.operator import AbstractOperator
 from base_classes.tool import AbstractTool
 from base_classes.llm import AbstractLanguageModel
+from base_classes.memory.memory_block import AbstractMemoryBlock
+from base_classes.memory.memory_atom import AbstractMemoryAtom
+from base_classes.memory.datatypes.data_item import PromptDataItem
 from configuration.operator_configuration import ReActOperatorConfiguration
 from prompt.user_message import UserMessagePrompt
 from prompt.assistant_message import AssistantMessagePrompt
+from prompt.tool_message import ToolMessagePrompt
 from tools.tool_chooser import ToolChooserTool
 
 class ReactOperator(AbstractOperator):
@@ -23,7 +27,7 @@ class ReactOperator(AbstractOperator):
     def __init__(self, config: ReActOperatorConfiguration) -> None:
         super().__init__(config = config)
         self._max_iterations = config.max_iterations
-        self._callable_tools: Dict[str, Any] = {}
+        self._callable_tools: Dict[str, AbstractTool] = {}
         self._tool_chooser = ToolChooserTool.get_tool_instance_by_id(tool_id = "TOOL | " + config.tool_tool_choser)
         callable_tools = config.tool_callable
         for callable_tool in callable_tools:
@@ -33,36 +37,35 @@ class ReactOperator(AbstractOperator):
         
         self._reasoning_llm = self._llm_component[0] # Only 1 LLM component is allowed for React operator.
         
-    def _choose_tool_id(self, input_message: str) -> List[str]:
+    def _choose_tool_id(self, input_message: str) -> Dict:
         """
-        This method is used to choose the tool for the React operator.
-        :return: The tool ID(s) for the React operator.
+        This method is used to choose the tool for the React operator. This method returns natural text for the tool to be used, in form of a prompt (tool call prompt).
+        :return: The tool to be used for the React operator (natural text).
         """
-        return self._tool_chooser.execute(input_message = input_message)
+        tools_to_call: List[Dict] = self._tool_chooser.execute(input_message = input_message)
+        return {"role": "tool",
+            "content": f"You can call the following functions: {tools_to_call}",
+            "tool_call_id": "tool_chooser"
+            }
     
-    def _get_observation_by_executing_tool(self, input_message: str) -> str:
-        tool_ids: List[str] = self._choose_tool_id(input_message = input_message)
-        
-        function_params = json.loads(input_message) # TODO: This is a placeholder. Replace this by parsing the input_message.
-        
-        results = {}
-        observation_str = "<observation>"
-        for tool_id in tool_ids:
-            tool: AbstractTool = self._callable_tools[tool_id]['tool']
-            results[tool_id] = tool.execute(function_params)
+    def _get_observation_by_executing_tool(self, list_of_tools: List) -> str:
+        _observation = ""
+        for tool in list_of_tools:
+            tool_id = "TOOL | " + tool['id']
+            tool_params = json.loads(tool['function']['arguments'])
+            tool_instance: AbstractTool = self._callable_tools[tool_id]['tool']
+            result = tool_instance.execute(function_params = tool_params)
+            self.memory_block.add_memory_atom(AbstractMemoryAtom(data = PromptDataItem(content = ToolMessagePrompt(prompt = {'role': 'tool', 'content': str(result), 'tool_call_id': tool_id}), source = tool_instance)))
+            _observation += f"Tool: {tool_id}\n"
+            _observation += f"Result: {result}\n"
             
-        for tool_id, result in results.items():
-            observation_str += f"Tool: {tool_id}\n"
-            observation_str += f"Result: {result}\n"
-        observation_str += "</observation>"
-        
-        return observation_str
+        return f"<observation>{_observation}</observation>"
     
     def run(self, input_message: Union[UserMessagePrompt, AssistantMessagePrompt]) -> AssistantMessagePrompt:
         """
         This method is used to run the React operator.
         """
-        
+        self.memory_block: AbstractMemoryBlock = AbstractMemoryBlock()
         REACT_MESSAGE = [
             {
                 "role": "system",
@@ -79,7 +82,7 @@ class ReactOperator(AbstractOperator):
             {
                 "role": "tool",
                 "content": "You can call the following functions: [{{\"wikipedia\": {{\"entity\": {{\"type\": \"string\", \"description\": \"The entity to search for in Wikipedia.\"}}}}}}]",
-                "tool_call_id": "TOOL | tool_chooser"
+                "tool_call_id": "tool_chooser"
             },
             {
                 "role": "assistant",
@@ -98,7 +101,7 @@ class ReactOperator(AbstractOperator):
             {
                 "role": "tool",
                 "content": "<observation>Observation 1: The Colorado orogeny was an episode of mountain building (an orogeny) in Colorado and surrounding areas.</observation>",
-                "tool_call_id": "TOOL | wikipedia"
+                "tool_call_id": "environment"
             },
             {
                 "role": "assistant",
@@ -107,7 +110,7 @@ class ReactOperator(AbstractOperator):
             {
                 "role": "tool",
                 "content": "You can call the following functions: [{{\"look_up\": {{\"keyword\": {{\"type\": \"string\", \"description\": \"Lookup the keywords in the given text.\"}}}}}}]",
-                "tool_call_id": "TOOL | tool_chooser"
+                "tool_call_id": "tool_chooser"
             },
             {
                 "role": "assistant",
@@ -126,7 +129,7 @@ class ReactOperator(AbstractOperator):
             {
                 "role": "tool",
                 "content": "<observation>Observation 2: (Result 1 / 1) The eastern sector extends into the High Plains and is called the Central Plains orogeny.</observation>",
-                "tool_call_id": "TOOL | look_up"
+                "tool_call_id": "environment"
             },
             {
                 "role": "assistant",
@@ -135,7 +138,7 @@ class ReactOperator(AbstractOperator):
             {
                 "role": "tool",
                 "content": "You can call the following functions: [{{\"look_up\": {{\"keyword\": {{\"type\": \"string\", \"description\": \"Lookup the keywords in the given text.\"}}}}}}]",
-                "tool_call_id": "TOOL | tool_chooser"
+                "tool_call_id": "tool_chooser"
             },
             {
                 "role": "assistant",
@@ -154,7 +157,7 @@ class ReactOperator(AbstractOperator):
             {
                 "role": "tool",
                 "content": "<observation>Observation 3: High Plains refers to one of two distinct land regions:</observation>",
-                "tool_call_id": "TOOL | look_up"
+                "tool_call_id": "environment"
             },
             {
                 "role": "assistant",
@@ -163,7 +166,7 @@ class ReactOperator(AbstractOperator):
             {
                 "role": "tool",
                 "content": "You can call the following functions: [{{\"wikipedia\": {{\"entity\": {{\"type\": \"string\", \"description\": \"The entity to search for in Wikipedia.\"}}}}}}]",
-                "tool_call_id": "TOOL | tool_chooser"
+                "tool_call_id": "tool_chooser"
             },
             {
                 "role": "assistant",
@@ -182,7 +185,7 @@ class ReactOperator(AbstractOperator):
             {
                 "role": "tool",
                 "content": "<observation>Observation 4: The High Plains are a subregion of the Great Plains. From east to west, the High Plains rise in elevation from around 1,800 to 7,000 ft (550 to 2,130 m).</observation>",
-                "tool_call_id": "TOOL | wikipedia"
+                "tool_call_id": "environment"
             },
             {
                 "role": "assistant",
@@ -194,22 +197,22 @@ class ReactOperator(AbstractOperator):
             },
         ]
         
+        self.memory_block.add_memory_atom(AbstractMemoryAtom(data = PromptDataItem(content = input_message, source = "user")))
+        
         for i in range(self._max_iterations):
-            thought_action = {
-                'role': 'assistant',
-                'content': f'<though>Thought {i}: '
-            }
-            thought_response = self._reasoning_llm.query(prompt = REACT_MESSAGE.append(thought_action), num_responses = 1, stop = [f"<action>"])
+            thought_response = self._reasoning_llm.query(prompt = REACT_MESSAGE, num_responses = 1, stop = [f"<action>"])
             thought_response_str = self._reasoning_llm.get_response_texts(query_responses = thought_response)[0]
+            self.memory_block.add_memory_atom(AbstractMemoryAtom(data = PromptDataItem(content = AssistantMessagePrompt(prompt = {'role': 'assistant', 'content': thought_response_str}), source = self._reasoning_llm)))
             if 'finish' in thought_response_str.lower():
                 break
             
-            tool_chooser_response: Dict = self._tool_chooser.execute(input_message = thought_response_str)
+            tool_chooser_response: Dict = self._choose_tool_id(input_message = thought_response_str)
+            self.memory_block.add_memory_atom(AbstractMemoryAtom(data = PromptDataItem(content = ToolMessagePrompt(prompt = tool_chooser_response), source = self._tool_chooser)))
             REACT_MESSAGE.append(tool_chooser_response)
-            action = self._reasoning_llm.query(prompt = REACT_MESSAGE.append({'role': 'assistant', 'content': f'<action>Action {i}:'}), num_responses = 1, stop = [f"<observation>"])
+            action = self._reasoning_llm.query(prompt = REACT_MESSAGE, num_responses = 1, stop = [f"<observation>"])
+            self.memory_block.add_memory_atom(AbstractMemoryAtom(data = PromptDataItem(content = AssistantMessagePrompt(prompt = action), source = self._reasoning_llm)))
             tool_calls_response = action['tool_calls']
-            tool_observations: Dict = self._get_observation_by_executing_tool(input_message = tool_calls_response)
-            REACT_MESSAGE.append(tool_observations)
+            tool_observations: str = self._get_observation_by_executing_tool(input_message = tool_calls_response)
+            REACT_MESSAGE.append({'role': 'tool', 'content': tool_observations, 'tool_call_id': 'environment'})
         
-        
-        return AssistantMessagePrompt(input_message.prompt)
+        return AssistantMessagePrompt(prompt={'role': 'assistant', 'content': thought_response_str})
