@@ -18,6 +18,8 @@ from tools.tool_chooser import ToolChooserTool
 class ReactOperator(AbstractOperator):
     """
     This operator is used to react to the user message.
+    Operator design is inspired by ReAct: Synergizing Reasoning and Acting in Language Models paper by Shuyun Yao et al.
+    Link: https://arxiv.org/abs/2210.03629.pdf
     """
     _config: ReActOperatorConfiguration = None
     _tool_chooser: ToolChooserTool = None

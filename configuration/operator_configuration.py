@@ -74,3 +74,24 @@ class ReActOperatorConfiguration(Configuration):
             ['tool.callable', [], list], # Callable tools
             ['max_iterations', 10, int], # Max iterations
         ]
+        
+class DebateOperatorConfiguration(Configuration):
+    """
+    Configuration class for CoT operator.
+    """
+    debate_num_of_round: int
+    debate_num_of_debaters: int
+    def __init__(self):
+        super().__init__()
+        sensitive_properties = []
+        self.sensitive_properties = [property_.replace('.', '_') for property_ in sensitive_properties]
+
+
+    def _init_properties(self):
+        """
+        Define properties for CoT operator.
+        """
+        return [
+            ['debate.num_of_round', '', int], # Number of rounds
+            ['debate.num_of_debaters', '', int], # Number of debaters
+        ]
