@@ -199,22 +199,27 @@ class ReactOperator(AbstractOperator):
             },
         ]
         
+        # Add inpust mesage to operator memory block
         self.memory_block.add_memory_atom(AbstractMemoryAtom(data = PromptDataItem(content = input_message, source = "user")))
         
         for i in range(self._max_iterations):
             thought_response = self._reasoning_llm.query(prompt = REACT_MESSAGE, num_responses = 1, stop = [f"<action>"])
             thought_response_str = self._reasoning_llm.get_response_texts(query_responses = thought_response)[0]
+            # Thoughts are generated as a thinking step. Consider these as a memory atom and add these thoughts to the memory block.
             self.memory_block.add_memory_atom(AbstractMemoryAtom(data = PromptDataItem(content = AssistantMessagePrompt(prompt = {'role': 'assistant', 'content': thought_response_str}), source = self._reasoning_llm)))
             if 'finish' in thought_response_str.lower():
                 break
             
             tool_chooser_response: Dict = self._choose_tool_id(input_message = thought_response_str)
+            # Tool chooser was called. Consider this as a memory atom and add this to the memory block.
             self.memory_block.add_memory_atom(AbstractMemoryAtom(data = PromptDataItem(content = ToolMessagePrompt(prompt = tool_chooser_response), source = self._tool_chooser)))
             REACT_MESSAGE.append(tool_chooser_response)
             action = self._reasoning_llm.query(prompt = REACT_MESSAGE, num_responses = 1, stop = [f"<observation>"])
+            # Reasoning LLM is called to get the tool to be used (the list of tools is given by tool chooser). Consider this as a memory atom and add this to the memory block.
             self.memory_block.add_memory_atom(AbstractMemoryAtom(data = PromptDataItem(content = AssistantMessagePrompt(prompt = action), source = self._reasoning_llm)))
             tool_calls_response = action['tool_calls']
             tool_observations: str = self._get_observation_by_executing_tool(input_message = tool_calls_response)
+            self.memory_block.add_memory_atom(AbstractMemoryAtom(data = PromptDataItem(content = ToolMessagePrompt(prompt = {'role': 'tool', 'content': tool_observations, 'tool_call_id': 'environment'}), source = self._callable_tools['TOOL | environment']['tool'])))
             REACT_MESSAGE.append({'role': 'tool', 'content': tool_observations, 'tool_call_id': 'environment'})
         
         return AssistantMessagePrompt(prompt={'role': 'assistant', 'content': thought_response_str})
