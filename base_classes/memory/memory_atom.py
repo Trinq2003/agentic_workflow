@@ -1,11 +1,10 @@
-from abc import ABC, abstractmethod
 import uuid
-from datetime import datetime
 from typing import List, Dict, Any, Self
 
 from base_classes.memory.management_term import MemoryState
+from base_classes.traceable_item import TimeTraceableItem
 
-class AbstractMemoryAtom(ABC):
+class AbstractMemoryAtom(TimeTraceableItem):
     """
     Represents the smallest indivisible unit of memory within a hierarchical memory system. 
     The data contained within an AbstractMemoryAtom is treated as an atomic entity from various perspectives.
@@ -22,8 +21,6 @@ class AbstractMemoryAtom(ABC):
     _mem_atom_id: uuid.UUID # Globlally unique identifier
     _data: Any # Data stored in the memory atom
     _access_count: int
-    _last_accessed: datetime
-    _last_write: datetime
     _state: MemoryState
     _required_atom: List[uuid.UUID] # List of memory atoms required for this atom to function
     _requiring_atom: List[uuid.UUID] # List of memory atoms requiring this atom to function
@@ -36,8 +33,6 @@ class AbstractMemoryAtom(ABC):
         self._required_atom: List[uuid.UUID] = required_atom
         self._requiring_atom: List[uuid.UUID] = requiring_atom
         self._access_count: int = 0
-        self._last_accessed: datetime = datetime.now()
-        self._last_write: datetime = self._last_accessed
         self._state: MemoryState = MemoryState.USED
         
         if self._mem_atom_id in self.__class__._mematom_instances_by_id.keys():
@@ -52,12 +47,6 @@ class AbstractMemoryAtom(ABC):
     @property
     def access_count(self):
         return self._access_count
-    @property
-    def last_accessed(self):
-        return self._last_accessed
-    @property
-    def last_write(self):
-        return self._last_write
     @property
     def state(self):
         return self._state
@@ -92,42 +81,6 @@ class AbstractMemoryAtom(ABC):
         :return: The instance if found, otherwise None.
         """
         return cls._mematom_instances_by_id.get(mem_atom_id, None)
-
-    # def _update_access(self):
-    #     self._last_accessed = datetime.now()
-    #     self._access_count += 1
-
-    # def read(self) -> Any:
-    #     """Read data from the memory instance.
-    #     """
-    #     self._update_access()
-    #     return self._data
-    
-    # def append_write(self, data: Any):
-    #     """Append data to the memory instance without changing the existing data.
-
-    #     Args:
-    #         requester (Any): The system component requesting access (agent, tool, operator, ...).
-    #         data (Any): Piece of data to append to the memory instance.
-
-    #     Raises:
-    #         PermissionError: If the requester lacks append writing permissions.
-    #     """
-    #     self._update_access()
-    #     self._append_data(data)
-    
-    # def over_write(self, data: Any):
-    #     """Overwrite existing data with the new one.
-
-    #     Args:
-    #         requester (Any): The system component requesting access (agent, tool, operator, ...).
-    #         data (Any): Piece of data to append to the memory instance.
-
-    #     Raises:
-    #         PermissionError: If the requester lacks append writing permissions.
-    #     """
-    #     self._update_access()
-    #     self._data = data
         
     def __str__(self):
         # TODO: Change the wording method
@@ -139,13 +92,3 @@ class AbstractMemoryAtom(ABC):
         suffix = f"\nThis message is a response to messages {requiring_id_str} and also leads to messages {required_id_str}.\n"
         
         return prefix + data_str + suffix
-
-    # @abstractmethod
-    # def _append_data(self, new_data: Any) -> None:
-    #     """Append data to the memory instance. This is used in append writing mode.
-
-    #     Args:
-    #         new_data (Any): Piece of data to append to the memory instance.
-    #     """
-    #     pass
-        

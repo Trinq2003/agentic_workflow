@@ -1,16 +1,12 @@
-from abc import ABC, abstractmethod
 import uuid
 from typing import Dict, List, Self, Any
-from dataclasses import dataclass
-from functools import lru_cache
-import time
 
 from base_classes.memory.memory_atom import AbstractMemoryAtom
 from base_classes.prompt import AbstractPrompt
 from base_classes.system_component import SystemComponent
-from base_classes.memory.management_term import MemoryType
+from base_classes.traceable_item import TimeTraceableItem
 
-class AbstractMemoryBlock(ABC):
+class AbstractMemoryBlock(TimeTraceableItem):
     """
     The AbstractMemoryBlock class represents a collection of AbstractMemoryAtom instances.
     It serves as a container for storing chains of conversations or actions, providing a structured 
@@ -113,7 +109,8 @@ class AbstractMemoryBlock(ABC):
         pass
     
     def _sync_dependencies(self) -> None:
-        """Synchronize the dependencies of memory atoms in the memory block.
+        """
+        Synchronize the dependencies of memory atoms in the memory block.
         """
         for mem_atom_id in self._mem_atom_graph.keys():
             memory_atom = AbstractMemoryAtom.get_mematom_instance_by_id(mem_atom_id)
