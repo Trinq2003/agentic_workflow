@@ -2,20 +2,20 @@ from abc import ABC, abstractmethod
 from openai.types.chat import ChatCompletionMessageParam
 from typing import List, Dict, Any, Optional
 
-class PromptAtom(ChatCompletionMessageParam):
+class ICIOPrompt(ChatCompletionMessageParam):
     """A class representing a single prompt message with ICIO components."""
     
     def __init__(
         self,
-        instruction: str,
-        context: str,
-        input_indicator: str,
-        output_indicator: str,
+        instruction: str="",
+        context: str="",
+        input_indicator: str="",
+        output_indicator: str="",
         role: str = "user",
         **kwargs: Any
     ) -> None:
         """
-        Initialize a PromptAtom with ICIO components.
+        Initialize a ICIOPrompt with ICIO components.
 
         :param instruction: The instruction part of the prompt
         :param context: The context part of the prompt
@@ -25,10 +25,15 @@ class PromptAtom(ChatCompletionMessageParam):
         :param kwargs: Additional arguments for ChatCompletionMessageParam
         """
         # Construct the content using ICIO components
-        content = f"<instruction>\n{instruction}\n</instruction>\n\n" \
-                 f"<context>\n{context}\n</context>\n\n" \
-                 f"<input_indicator>\n{input_indicator}\n</input_indicator>\n\n" \
-                 f"<output_indicator>\n{output_indicator}\n</output_indicator>"
+        content = ""
+        if instruction:
+            content += f"<instruction>\n{instruction}\n</instruction>\n\n"
+        if context:
+            content += f"<context>\n{context}\n</context>\n\n"
+        if input_indicator:
+            content += f"<input_indicator>\n{input_indicator}\n</input_indicator>\n\n"
+        if output_indicator:
+            content += f"<output_indicator>\n{output_indicator}\n</output_indicator>"
         
         # Initialize the parent ChatCompletionMessageParam
         super().__init__(content=content, role=role, **kwargs)
@@ -79,22 +84,42 @@ class PromptAtom(ChatCompletionMessageParam):
 
     def _update_content(self) -> None:
         """Update the content attribute when any ICIO component changes."""
-        self["content"] = f"<instruction>\n{self._instruction}\n</instruction>\n\n" \
-                 f"<context>\n{self._context}\n</context>\n\n" \
-                 f"<input_indicator>\n{self._input_indicator}\n</input_indicator>\n\n" \
-                 f"<output_indicator>\n{self._output_indicator}\n</output_indicator>"
+        out_string_prompt = ""
+        if self._instruction:
+            out_string_prompt += f"<instruction>\n{self._instruction}\n</instruction>\n\n"
+        if self._context:
+            out_string_prompt += f"<context>\n{self._context}\n</context>\n\n"
+        if self._input_indicator:
+            out_string_prompt += f"<input_indicator>\n{self._input_indicator}\n</input_indicator>\n\n"
+        if self._output_indicator:
+            out_string_prompt += f"<output_indicator>\n{self._output_indicator}\n</output_indicator>"
+            
+        self["content"] = out_string_prompt.strip()
+                 
+    def __str__(self) -> str:
+        """Return a string representation of the ICIOPrompt."""
+        out_string_prompt = ""
+        if self._instruction:
+            out_string_prompt += f"<instruction>\n{self._instruction}\n</instruction>\n\n"
+        if self._context:
+            out_string_prompt += f"<context>\n{self._context}\n</context>\n\n"
+        if self._input_indicator:
+            out_string_prompt += f"<input_indicator>\n{self._input_indicator}\n</input_indicator>\n\n"
+        if self._output_indicator:
+            out_string_prompt += f"<output_indicator>\n{self._output_indicator}\n</output_indicator>"
+        return out_string_prompt.strip()
 
 
 class AbstractPrompt(ABC):
-    """Abstract base class for prompts composed of PromptAtom objects."""
+    """Abstract base class for prompts composed of ChatCompletionMessageParam objects."""
     
     prompt: List[ChatCompletionMessageParam] = None
     
-    def __init__(self, prompt: List[PromptAtom]) -> None:
+    def __init__(self, prompt: List[ChatCompletionMessageParam]) -> None:
         """
-        Initialize the AbstractPrompt instance with a list of PromptAtom objects.
+        Initialize the AbstractPrompt instance with a list of ChatCompletionMessageParam objects.
 
-        :param prompt: List of PromptAtom objects forming the complete prompt
-        :type prompt: List[PromptAtom]
+        :param prompt: List of ChatCompletionMessageParam objects forming the complete prompt
+        :type prompt: List[ChatCompletionMessageParam]
         """
         self.prompt = prompt
