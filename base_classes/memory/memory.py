@@ -3,7 +3,7 @@ import uuid
 from typing import List, Dict, Self, Any
 
 from base_classes.memory.memory_block import AbstractMemoryBlock
-from base_classes.memory.memory_feature_engineer import MemoryFeatureEngineer
+from base_classes.memory.memory_worker import MemoryFeatureEngineer
 
 class AbstractMemory(ABC):
     _mem_id: uuid.UUID
