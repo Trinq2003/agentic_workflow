@@ -5,11 +5,10 @@ class MemoryState(Enum):
     USED = 1 # Contains data and was used by at least a system component
     LOCKED = 2 # Locked, no system component can write data
 
-class MemoryType(Enum):
-    LOWER_READ_HIGHER_READ = 1
-    LOWER_WRITE_HIGHER_READ = 2
-    LOWER_READ_HIGHER_NO_ACCESS = 3
-    LOWER_WRITE_HIGHER_NO_ACCESS = 4
-    LOWER_NO_ACCESS_HIGHER_WRITE = 5
-    LOWER_READ_HIGHER_WRITE = 6
-    LOWER_WRITE_HIGHER_WRITE = 7
+class MemoryBlockState(Enum):
+    EMPTY = 0 # Empty, no data in the memory block
+    RAW_INPUT_ONLY = 1 # Raw input only, the system hasn't finished processing it yet
+    RAW_INPUT_AND_OUTPUT = 2 # Raw input and output, the system processed the raw input and response raw data
+    REFINED_INPUT = 3 # Refined input, the system processed the raw input and response refined data
+    REFINED_INPUT_AND_OUTPUT = 4 # Refined input and output, the system processed the raw input and response refined data and outputed data
+    FEATURE_ENGINEERED = 5 # Extracted features, the system processed the input and outputed data, and the data is refined and features are extracted
