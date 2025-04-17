@@ -18,11 +18,9 @@ class AbstractMemoryBlock(TimeTraceableItem):
     _mem_block_id: uuid.UUID
     _memory_atoms: List[AbstractMemoryAtom] = []
     _mem_atom_graph: Dict[uuid.UUID, List[uuid.UUID]] = {} # Graph of memory atoms and their dependencies
-    _block_address_in_memory: Dict[str, Any] = {}
     identifying_features: Dict[str, Any] = {}
     
-    _list_of_memblock_ids: List[uuid.UUID] = []
-    _memblock_instances_by_id: Dict[str, Self] = {}
+    _memblock_instances_by_id: Dict[uuid.UUID, Self] = {}
     def __init__(self):
         self._mem_block_id: uuid.UUID = uuid.uuid4()
         self._memory_atoms: List[AbstractMemoryAtom] = []
@@ -31,6 +29,25 @@ class AbstractMemoryBlock(TimeTraceableItem):
             raise ValueError(f"❌ Memory Block ID {self._mem_block_id} is already initiated.")
         else:
             self.__class__._memblock_instances_by_id[self._mem_block_id] = self
+    
+    @classmethod
+    def get_memblock_ids(cls) -> List[uuid.UUID]:
+        """
+        Get the list of memory block IDs.
+        
+        :return: The list of memory block IDs.
+        :rtype: List[uuid.UUID]
+        """
+        return cls._memblock_instances_by_id.keys()
+    @classmethod
+    def get_memblock_instance_by_id(cls, mem_block_id: uuid.UUID) -> Self:
+        """
+        Retrieve an instance of the class by its ID.
+
+        :param id: The unique identifier of the instance.
+        :return: The instance if found, otherwise None.
+        """
+        return cls._memblock_instances_by_id.get(mem_block_id, None)
     
     @property
     def mem_block_id(self) -> uuid.UUID:
@@ -45,19 +62,6 @@ class AbstractMemoryBlock(TimeTraceableItem):
     def mem_atom_graph(self, graph: Dict[uuid.UUID, List[uuid.UUID]]) -> None:
         self._mem_atom_graph = graph
         self._sync_dependencies()
-    @property
-    def block_address_in_memory(self) -> Dict[str, Any]:
-        return self._block_address_in_memory
-    @block_address_in_memory.setter
-    def block_address_in_memory(self, block_address: Dict[str, Any]) -> None:
-        self._block_address_in_memory = block_address
-    
-    @classmethod
-    def get_memblock_ids(cls) -> List[uuid.UUID]:
-        return cls._list_of_memblock_ids
-    @classmethod
-    def get_memblock_instance_by_id(cls, mem_block_id: uuid.UUID) -> Self:
-        return cls._memblock_instances_by_id[mem_block_id]
     
     def add_memory_atom(self, memory_atom: AbstractMemoryAtom) -> None:
         self._add_one_node_without_dependencies(memory_atom)
@@ -122,3 +126,17 @@ class AbstractMemoryBlock(TimeTraceableItem):
     
     def __len__(self) -> int:
         return len(self._memory_atoms)
+    
+class RealMemoryBlock(AbstractMemoryBlock):
+    """
+    The RealMemoryBlock class is a concrete implementation of the AbstractMemoryBlock class.
+    It serves as a real storage for conversation between user and system.
+    """
+    pass
+
+class SyntheticMemoryBlock(AbstractMemoryBlock):
+    """
+    The SyntheticMemoryBlock class is a concrete implementation of the AbstractMemoryBlock class.
+    It serves as a refined storage based on the content of ReaslMemoryBlock (only keep the related content to the memory topic).
+    """
+    pass
