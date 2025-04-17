@@ -2,6 +2,7 @@ import uuid
 from typing import Dict, List, Self, Any
 
 from base_classes.memory.memory_atom import AbstractMemoryAtom
+from base_classes.memory.memory_features import MemoryBlockFeature
 from base_classes.prompt import AbstractPrompt
 from base_classes.system_component import SystemComponent
 from base_classes.traceable_item import TimeTraceableItem
@@ -18,7 +19,14 @@ class AbstractMemoryBlock(TimeTraceableItem):
     _mem_block_id: uuid.UUID
     _memory_atoms: List[AbstractMemoryAtom] = []
     _mem_atom_graph: Dict[uuid.UUID, List[uuid.UUID]] = {} # Graph of memory atoms and their dependencies
-    identifying_features: Dict[str, Any] = {}
+    identifying_features: MemoryBlockFeature = {}
+    
+    _input_query: str = ""
+    _output_response: str = ""
+    _refined_input_query: str = ""
+    _refined_output_response: str = ""
+    
+    _topic_container_id: uuid.UUID
     
     _memblock_instances_by_id: Dict[uuid.UUID, Self] = {}
     def __init__(self):
@@ -62,6 +70,36 @@ class AbstractMemoryBlock(TimeTraceableItem):
     def mem_atom_graph(self, graph: Dict[uuid.UUID, List[uuid.UUID]]) -> None:
         self._mem_atom_graph = graph
         self._sync_dependencies()
+    @property
+    def input_query(self) -> str:
+        return self._input_query
+    @input_query.setter
+    def input_query(self, query: str) -> None:
+        self._input_query = query
+    @property
+    def output_response(self) -> str:
+        return self._output_response
+    @output_response.setter
+    def output_response(self, response: str) -> None:
+        self._output_response = response
+    @property
+    def refined_input_query(self) -> str:
+        return self._refined_input_query
+    @refined_input_query.setter
+    def refined_input_query(self, query: str) -> None:
+        self._refined_input_query = query
+    @property
+    def refined_output_response(self) -> str:
+        return self._refined_output_response
+    @refined_output_response.setter
+    def refined_output_response(self, response: str) -> None:
+        self._refined_output_response = response
+    @property
+    def topic_container_id(self) -> uuid.UUID:
+        return self._topic_container_id
+    @topic_container_id.setter
+    def topic_container_id(self, topic_container_id: uuid.UUID) -> None:
+        self._topic_container_id = topic_container_id
     
     def add_memory_atom(self, memory_atom: AbstractMemoryAtom) -> None:
         self._add_one_node_without_dependencies(memory_atom)
@@ -86,6 +124,7 @@ class AbstractMemoryBlock(TimeTraceableItem):
             self._mem_atom_graph[memory_atom.mem_atom_id] = []
     
     def __str__(self):
+        # TODO: Rewrite the __str__ method to be more informative and be specialized for keyword extraction task.
         memory_block_str = []
         for memory_atom in self._memory_atoms:
             memory_atom_str = str(memory_atom)
