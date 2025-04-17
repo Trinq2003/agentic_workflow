@@ -13,9 +13,7 @@ class AbstractEmbeddingModel(SystemComponent):
     _emb_moddel: Any = None
     _config: EmbeddingModelConfiguration = None
     _emb_id: str = None
-    _list_of_emb_ids: List[str] = []
     _emb_instances_by_id: Dict[str, Self] = {}
-    
     
     _model_name: str = None
     _max_tokens: int = None
@@ -41,13 +39,29 @@ class AbstractEmbeddingModel(SystemComponent):
 
         self._identical_threshold: float = self._config.model_identical_threshold
         
-        if self._emb_id in self.__class__._list_of_emb_ids:
-            raise ValueError(f"Embedding ID {self._emb_id} is already initiated.")
-        else:
-            self.__class__._list_of_emb_ids.append(self._emb_id)
-        
         if self._emb_id in self.__class__._emb_instances_by_id.keys():
-            raise ValueError(f"Embedding ID {self._emb_id} is already initiated.")
+            raise ValueError(f"❌ Embedding ID {self._emb_id} is already initiated.")
+        else:
+            self.__class__._emb_instances_by_id[self._emb_id] = self
+
+    @classmethod
+    def get_emb_ids(cls) -> List[str]:
+        """
+        Get the list of embedding model IDs.
+
+        :return: The list of embedding model IDs.
+        :rtype: List[str]
+        """
+        return cls._emb_instances_by_id.keys()
+    @classmethod
+    def get_emb_instance_by_id(cls, emb_id: str) -> Self:
+        """
+        Retrieve an instance of the class by its ID.
+
+        :param id: The unique identifier of the instance.
+        :return: The instance if found, otherwise None.
+        """
+        return cls._emb_instances_by_id.get(emb_id, None)
 
     @property
     def identical_threshold(self) -> float:

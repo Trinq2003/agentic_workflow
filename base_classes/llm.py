@@ -15,7 +15,6 @@ class AbstractLanguageModel(SystemComponent):
     _llm_model: OpenAI = None
     _config: LLMConfiguration = None
     _llm_id: str = None
-    _list_of_llm_ids: List[str] = []
     _llm_instances_by_id: Dict[str, Self] = {}
     
     _model_name: str = None
@@ -57,11 +56,6 @@ class AbstractLanguageModel(SystemComponent):
         
         self._load_model()
         
-        if self._llm_id in self.__class__._list_of_llm_ids:
-            raise ValueError(f"LLM ID {self._llm_id} is already initiated.")
-        else:
-            self.__class__._list_of_llm_ids.append(self._llm_id)
-        
         if self._llm_id in self.__class__._llm_instances_by_id.keys():
             raise ValueError(f"LLM ID {self._llm_id} is already initiated.")
         else:
@@ -74,7 +68,7 @@ class AbstractLanguageModel(SystemComponent):
         :return: The list of operator IDs.
         :rtype: str
         """
-        return cls._list_of_llm_ids
+        return cls._llm_instances_by_id.keys()
     @classmethod
     def get_llm_instance_by_id(cls, llm_id) -> Self:
         """

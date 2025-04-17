@@ -16,7 +16,6 @@ class AbstractOperator(SystemComponent):
     _operator_id: str = None
     _operator_type: str = None
     _enabled: bool = None
-    _list_of_operator_ids: List[str] = []
     _operator_instances_by_id: Dict[str, Self] = {}
     memory_block: AbstractMemoryBlock = None
     
@@ -56,11 +55,6 @@ class AbstractOperator(SystemComponent):
                 self._tool_component.append(AbstractTool.get_tool_instance_by_id(tool_id = tool_component))
             else:
                 raise ValueError(f"❌ Tool ID {tool_component} is not initiated.")
-        
-        if self._operator_id in self.__class__._list_of_operator_ids:
-            raise ValueError(f"❌ Operator ID {self._operator_id} is already initiated.")
-        else:
-            self.__class__._list_of_operator_ids.append(self._operator_id)
                 
         if self._operator_id in self.__class__._operator_instances_by_id.keys():
             raise ValueError(f"❌ Operator ID {self._operator_id} is already initiated.")
@@ -75,7 +69,7 @@ class AbstractOperator(SystemComponent):
         :return: The list of operator IDs.
         :rtype: List[str]
         """
-        return cls._list_of_operator_ids
+        return cls._operator_instances_by_id.keys()
     @classmethod
     def get_operator_instance_by_id(cls, operator_id) -> Self:
         """
