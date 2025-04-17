@@ -3,6 +3,7 @@ from typing import Dict, List, Self, Any
 
 from base_classes.memory.memory_atom import AbstractMemoryAtom
 from base_classes.memory.memory_features import MemoryBlockFeature
+from base_classes.memory.management_term import MemoryBlockState
 from base_classes.prompt import AbstractPrompt
 from base_classes.system_component import SystemComponent
 from base_classes.traceable_item import TimeTraceableItem
@@ -25,6 +26,7 @@ class AbstractMemoryBlock(TimeTraceableItem):
     _output_response: str = ""
     _refined_input_query: str = ""
     _refined_output_response: str = ""
+    _mem_block_state: MemoryBlockState
     
     _topic_container_id: uuid.UUID
     
@@ -32,6 +34,7 @@ class AbstractMemoryBlock(TimeTraceableItem):
     def __init__(self):
         self._mem_block_id: uuid.UUID = uuid.uuid4()
         self._memory_atoms: List[AbstractMemoryAtom] = []
+        self._mem_block_state: MemoryBlockState = MemoryBlockState.EMPTY
         
         if self._mem_block_id in self.__class__._memblock_instances_by_id.keys():
             raise ValueError(f"❌ Memory Block ID {self._mem_block_id} is already initiated.")
@@ -75,24 +78,32 @@ class AbstractMemoryBlock(TimeTraceableItem):
         return self._input_query
     @input_query.setter
     def input_query(self, query: str) -> None:
+        if self.mem_block_state < MemoryBlockState.RAW_INPUT_ONLY:
+            self.mem_block_state = MemoryBlockState.RAW_INPUT_ONLY
         self._input_query = query
     @property
     def output_response(self) -> str:
         return self._output_response
     @output_response.setter
     def output_response(self, response: str) -> None:
+        if self.mem_block_state < MemoryBlockState.RAW_INPUT_AND_OUTPUT:
+            self.mem_block_state = MemoryBlockState.RAW_INPUT_AND_OUTPUT
         self._output_response = response
     @property
     def refined_input_query(self) -> str:
         return self._refined_input_query
     @refined_input_query.setter
     def refined_input_query(self, query: str) -> None:
+        if self.mem_block_state < MemoryBlockState.REFINED_INPUT:
+            self.mem_block_state = MemoryBlockState.REFINED_INPUT
         self._refined_input_query = query
     @property
     def refined_output_response(self) -> str:
         return self._refined_output_response
     @refined_output_response.setter
     def refined_output_response(self, response: str) -> None:
+        if self.mem_block_state < MemoryBlockState.REFINED_INPUT_AND_OUTPUT:
+            self.mem_block_state = MemoryBlockState.REFINED_INPUT_AND_OUTPUT
         self._refined_output_response = response
     @property
     def topic_container_id(self) -> uuid.UUID:
@@ -100,6 +111,12 @@ class AbstractMemoryBlock(TimeTraceableItem):
     @topic_container_id.setter
     def topic_container_id(self, topic_container_id: uuid.UUID) -> None:
         self._topic_container_id = topic_container_id
+    @property
+    def mem_block_state(self) -> MemoryBlockState:
+        return self._mem_block_state
+    @mem_block_state.setter
+    def mem_block_state(self, state: MemoryBlockState) -> None:
+        self._mem_block_state = state
     
     def add_memory_atom(self, memory_atom: AbstractMemoryAtom) -> None:
         self._add_one_node_without_dependencies(memory_atom)
