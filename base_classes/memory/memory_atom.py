@@ -25,8 +25,7 @@ class AbstractMemoryAtom(TimeTraceableItem):
     _required_atom: List[uuid.UUID] # List of memory atoms required for this atom to function
     _requiring_atom: List[uuid.UUID] # List of memory atoms requiring this atom to function
 
-    _list_of_mematom_ids: List[uuid.UUID] = []
-    _mematom_instances_by_id: Dict[str, Self] = {}
+    _mematom_instances_by_id: Dict[uuid.UUID, Self] = {}
     def __init__(self, data: Any, required_atom: List[uuid.UUID] = [], requiring_atom: List[uuid.UUID] = []):
         self._mem_atom_id: uuid.UUID = uuid.uuid4()
         self._data: Any = data
@@ -39,7 +38,25 @@ class AbstractMemoryAtom(TimeTraceableItem):
             raise ValueError(f"❌ Memory Atom ID {self._mem_atom_id} is already initiated.")
         else:
             self.__class__._mematom_instances_by_id[self._mem_atom_id] = self
-            self.__class__._list_of_mematom_ids.append(self._mem_atom_id)
+            
+    @classmethod
+    def get_mematom_ids(cls) -> List[uuid.UUID]:
+        """
+        Get the list of memory atom instances.
+
+        :return: The list of memory atom instances.
+        :rtype: List[uuid.UUID, Self]
+        """
+        return cls._mematom_instances_by_id.keys()
+    @classmethod
+    def get_mematom_instance_by_id(cls, mem_atom_id: uuid.UUID) -> Self:
+        """
+        Retrieve an instance of the class by its ID.
+
+        :param id: The unique identifier of the instance.
+        :return: The instance if found, otherwise None.
+        """
+        return cls._mematom_instances_by_id.get(mem_atom_id, None)
 
     @property
     def mem_atom_id(self):
