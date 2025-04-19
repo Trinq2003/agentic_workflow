@@ -1,8 +1,11 @@
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Self
 
+from base_classes.configuration import Configuration
+
 class SystemComponent(ABC):
     """Abstract base class that defines the interface for all system components."""
+    _config: Configuration = None
     _component_id: str = None
     _component_instances_by_id: Dict[str, Self] = {}
     def __init__(self, **kwargs) -> None:
