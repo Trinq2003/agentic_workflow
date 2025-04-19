@@ -4,7 +4,10 @@ from typing import List, Dict, Any, Optional
 
 class ICIOPrompt(ChatCompletionMessageParam):
     """A class representing a single prompt message with ICIO components."""
-    
+    _instruction: str
+    _context: str
+    _input_indicator: str
+    _output_indicator: str
     def __init__(
         self,
         instruction: str="",

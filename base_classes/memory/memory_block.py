@@ -22,12 +22,12 @@ class AbstractMemoryBlock(TimeTraceableItem):
     _mem_atom_graph: Dict[uuid.UUID, List[uuid.UUID]] = {} # Graph of memory atoms and their dependencies
     identifying_features: MemoryBlockFeature = {}
     
-    _input_query: str = ""
-    _output_response: str = ""
-    _refined_input_query: str = ""
-    _refined_output_response: str = ""
+    _input_query: str = "" # Input query from the user or system
+    _output_response: str = "" # Output response from the system or assistant
+    _refined_input_query: str = "" # Refined input query after processing
+    _refined_output_response: str = "" # Refined output response after processing
     _mem_block_state: MemoryBlockState
-    
+    _access_count: int = 0 # Access count for the memory block    
     _topic_container_id: uuid.UUID
     
     _memblock_instances_by_id: Dict[uuid.UUID, Self] = {}
@@ -75,33 +75,41 @@ class AbstractMemoryBlock(TimeTraceableItem):
         self._sync_dependencies()
     @property
     def input_query(self) -> str:
+        self._access_count += 1
         return self._input_query
     @input_query.setter
     def input_query(self, query: str) -> None:
+        self._access_count += 1
         if self.mem_block_state < MemoryBlockState.RAW_INPUT_ONLY:
             self.mem_block_state = MemoryBlockState.RAW_INPUT_ONLY
         self._input_query = query
     @property
     def output_response(self) -> str:
+        self._access_count += 1
         return self._output_response
     @output_response.setter
     def output_response(self, response: str) -> None:
+        self._access_count += 1
         if self.mem_block_state < MemoryBlockState.RAW_INPUT_AND_OUTPUT:
             self.mem_block_state = MemoryBlockState.RAW_INPUT_AND_OUTPUT
         self._output_response = response
     @property
     def refined_input_query(self) -> str:
+        self._access_count += 1
         return self._refined_input_query
     @refined_input_query.setter
     def refined_input_query(self, query: str) -> None:
+        self._access_count += 1
         if self.mem_block_state < MemoryBlockState.REFINED_INPUT:
             self.mem_block_state = MemoryBlockState.REFINED_INPUT
         self._refined_input_query = query
     @property
     def refined_output_response(self) -> str:
+        self._access_count += 1
         return self._refined_output_response
     @refined_output_response.setter
     def refined_output_response(self, response: str) -> None:
+        self._access_count += 1
         if self.mem_block_state < MemoryBlockState.REFINED_INPUT_AND_OUTPUT:
             self.mem_block_state = MemoryBlockState.REFINED_INPUT_AND_OUTPUT
         self._refined_output_response = response
