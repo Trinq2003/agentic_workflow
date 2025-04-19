@@ -41,3 +41,6 @@ class AbstractMemoryTopic(TimeTraceableItem):
     @property
     def mem_topic_id(self) -> uuid.UUID:
         return self._mem_topic_id
+    @property
+    def chain_of_memblocks(self) -> List[AbstractMemoryBlock]:
+        return self._chain_of_memblocks

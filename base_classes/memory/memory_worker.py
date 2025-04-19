@@ -1,6 +1,8 @@
 from abc import abstractmethod
 from typing import List, Dict
+import torch
 from torch import Tensor
+import numpy as np
 
 from base_classes.llm import AbstractLanguageModel
 from base_classes.embedding import AbstractEmbeddingModel
@@ -71,6 +73,17 @@ Your rewritten output should ensure the conversation feels fluid and responsive,
 class MemoryWorker:
     _llm: AbstractLanguageModel
     _emb_model: AbstractEmbeddingModel
+    _tunable_hyperparameters: Dict[str, float] = {
+        "temporal_score_weight": 1/3,
+        "access_count_weight": 1/3,
+        "semantic_score_weight": 1/3,
+        "semantic_weights": {
+            "refined_input_embedding": 1/4,
+            "refined_output_embedding": 1/4,
+            "input_embedding": 1/4,
+            "output_embedding": 1/4,
+        }   
+    }
     
     def __init__(self, llm: AbstractLanguageModel, emb_model: AbstractEmbeddingModel) -> None:
         """
@@ -142,7 +155,7 @@ class MemoryWorker:
         
         return keywords
     
-    def _generate_embedding_for_memory_block(self, mem_block: AbstractMemoryBlock) -> List[Tensor] | Tensor:
+    def _generate_embedding_for_memory_block(self, mem_block: AbstractMemoryBlock) -> Dict:
         """
         Generate an embedding vector for the input string using the embedding model.
 
@@ -198,6 +211,51 @@ class MemoryWorker:
         mem_block.mem_block_state = MemoryBlockState.FEATURE_ENGINEERED
     
     # Memory block retrieval method
-    def memory_block_retrieval(self, mem_block: AbstractMemoryBlock) -> List[AbstractMemoryBlock]:
-        # TODO: Implement this method to retrieve relevant memory blocks based on the input query and context.
-        pass
+    def _retrieval_temporal_score(self, turn_number, current_turn) -> float:
+        diff = turn_number - current_turn
+        x = (2/3) * (7 - diff)
+        return torch.sigmoid(torch.tensor(x, dtype=torch.float32)).item()
+    def _retrieval_access_score(self, access_count: int) -> float:
+        return np.log(access_count + 1)/np.log(30)
+    def _retrieval_semantic_similarity_score(self, raw_input_emb_similarity: float, raw_output_emb_similarity: float, refined_input_emb_similarity: float, refined_output_emb_similarity: float) -> float:
+        return self._tunable_hyperparameters["semantic_weights"]["input_embedding"] * raw_input_emb_similarity + self._tunable_hyperparameters["semantic_weights"]["output_embedding"] * raw_output_emb_similarity + self._tunable_hyperparameters["semantic_weights"]["refined_input_embedding"] * refined_input_emb_similarity + self._tunable_hyperparameters["semantic_weights"]["refined_output_embedding"] * refined_output_emb_similarity
+    def _retrieval_score(self, temporal_score: float, access_score: float, semantic_similarity_score: float) -> float:
+        return self._tunable_hyperparameters["temporal_score_weight"] * temporal_score + self._tunable_hyperparameters["access_count_weight"]* access_score + self._tunable_hyperparameters["semantic_score_weight"] * semantic_similarity_score
+    
+    def memory_block_retrieval(self, mem_block: AbstractMemoryBlock, top_k: int = 5) -> List[AbstractMemoryBlock]:
+        container_topic_id = mem_block.topic_container_id
+        list_of_mem_blocks = AbstractMemoryTopic.get_memtopic_instance_by_id(container_topic_id).chain_of_memblocks
+        current_turn = len(list_of_mem_blocks)
+        
+        input_query = mem_block.input_query
+        input_query_emb = self._emb_model.encode(input_query)
+        
+        score_list = []
+        
+        for (turn_number, mem_block) in enumerate(list_of_mem_blocks):
+            # Calculate the temporal score
+            temporal_score = self._retrieval_temporal_score(turn_number, current_turn)
+            
+            # Calculate the access score
+            access_count = mem_block.access_count
+            access_score = self._retrieval_access_score(access_count)
+            
+            # Calculate the similarity score
+            raw_input_emb = mem_block.identifying_features["feature_for_raw_context"]["input_embedding"]
+            raw_input_emb_similarity = self._emb_model.similarity(input_query, raw_input_emb)
+            raw_output_emb = mem_block.identifying_features["feature_for_raw_context"]["output_embedding"]
+            raw_output_emb_similarity = self._emb_model.similarity(input_query, raw_output_emb)
+            refined_input_emb = mem_block.identifying_features["feature_for_refined_context"]["refined_input_embedding"]
+            refined_input_emb_similarity = self._retrieval_semantic_similarity_score(input_query_emb, refined_input_emb)
+            refined_output_emb = mem_block.identifying_features["feature_for_refined_context"]["refined_output_embedding"]
+            refined_output_emb_similarity = self._retrieval_semantic_similarity_score(input_query_emb, refined_output_emb)
+            
+            semantic_similarity_score = self._retrieval_semantic_similarity_score(raw_input_emb_similarity, raw_output_emb_similarity, refined_input_emb_similarity, refined_output_emb_similarity)
+            # Calculate the overall retrieval score
+            retrieval_score = self._retrieval_score(temporal_score, access_score, semantic_similarity_score)
+
+            score_list.append((mem_block, retrieval_score))
+        
+        score_list.sort(key=lambda x: x[1], reverse=True)
+        
+        return [mem_block for mem_block, score in score_list[:top_k]]

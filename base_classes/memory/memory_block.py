@@ -125,6 +125,9 @@ class AbstractMemoryBlock(TimeTraceableItem):
     @mem_block_state.setter
     def mem_block_state(self, state: MemoryBlockState) -> None:
         self._mem_block_state = state
+    @property
+    def access_count(self) -> int:
+        return self._access_count
     
     def add_memory_atom(self, memory_atom: AbstractMemoryAtom) -> None:
         self._add_one_node_without_dependencies(memory_atom)
