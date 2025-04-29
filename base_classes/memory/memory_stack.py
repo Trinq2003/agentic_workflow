@@ -1,0 +1,45 @@
+import uuid
+from typing import Dict, List, Self, Any
+
+from base_classes.memory.memory_features import MemoryTopicFeature
+from base_classes.memory.memory_topic import AbstractMemoryTopic
+from base_classes.traceable_item import TimeTraceableItem
+
+class AbstractMemoryStack(TimeTraceableItem):
+    _mem_stack_id: uuid.UUID
+    _list_of_mem_topics: List[AbstractMemoryTopic]
+    raw_context: str = ""
+    refined_context: str = ""
+    
+    _memstack_instances_by_id: Dict[uuid.UUID, Self] = {}
+    
+    def __init__(self):
+        self._mem_stack_id: uuid.UUID = uuid.uuid4()
+        self._list_of_mem_topics: List[AbstractMemoryTopic] = []
+        
+        if self._mem_stack_id in self.__class__._memstack_instances_by_id.keys():
+            raise ValueError(f"❌ Memory Topic ID {self._mem_stack_id} is already initiated.")
+        else:
+            self.__class__._memstack_instances_by_id[self._mem_stack_id] = self
+
+    @classmethod
+    def get_memstack_ids(cls) -> List[uuid.UUID]:
+        return cls._memstack_instances_by_id.keys()
+    @classmethod
+    def get_memstack_instance_by_id(cls, mem_stack_id: uuid.UUID) -> Self:
+        return cls._memstack_instances_by_id[mem_stack_id]
+    def insert_mem_topic(self, mem_topic: AbstractMemoryTopic) -> None:
+        self._list_of_mem_topics.append(mem_topic)
+        mem_topic.stack_container_id(self._mem_stack_id)
+    def get_address_of_topic_by_id(self, mem_topic_id: uuid.UUID) -> AbstractMemoryTopic:
+        for index, mem_topic in enumerate(self._list_of_mem_topics):
+            if mem_topic.mem_topic_id == mem_topic_id:
+                return index
+        raise ValueError(f"❌ Memory Topic ID {mem_topic_id} not found in Memory Stack {self._mem_stack_id}.")
+        
+    @property
+    def mem_stack_id(self) -> uuid.UUID:
+        return self._mem_stack_id
+    @property
+    def list_of_mem_topics(self) -> List[AbstractMemoryTopic]:
+        return self._list_of_mem_topics

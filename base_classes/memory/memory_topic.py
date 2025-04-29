@@ -11,6 +11,7 @@ class AbstractMemoryTopic(TimeTraceableItem):
     identifying_features: MemoryTopicFeature = {}
     raw_context: str = ""
     refined_context: str = ""
+    _stack_container_id: uuid.UUID
     
     _memtopic_instances_by_id: Dict[uuid.UUID, Self] = {}
     
@@ -44,3 +45,9 @@ class AbstractMemoryTopic(TimeTraceableItem):
     @property
     def chain_of_memblocks(self) -> List[AbstractMemoryBlock]:
         return self._chain_of_memblocks
+    @property
+    def stack_container_id(self) -> uuid.UUID:
+        return self._stack_container_id
+    @stack_container_id.setter
+    def stack_container_id(self, stack_container_id: uuid.UUID) -> None:
+        self._stack_container_id = stack_container_id
