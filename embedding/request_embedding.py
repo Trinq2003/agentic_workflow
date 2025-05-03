@@ -40,8 +40,9 @@ class RequestEmbeddingModel(AbstractEmbeddingModel):
         }
         response = requests.get(f"{self.__emb_api_api_base}", headers=headers)
         if response.status_code != 200:
-            raise ValueError(f"❌ Failed to connect to API embedding model: {response.status_code}, {response.text}")
-        self.logger.info(f"✅ API embedding model loaded successfully from {self.__emb_api_api_base}")
+            
+            raise ValueError(f"[❌ {self.__class__.__name__}] Failed to connect to API embedding model: {response.status_code}, {response.text}")
+        self.logger.info(f"[✅ {self.__class__.__name__}] API embedding model loaded successfully from {self.__emb_api_api_base}")
     
     def encode(self, text: str) -> List:
         """
@@ -66,18 +67,18 @@ class RequestEmbeddingModel(AbstractEmbeddingModel):
                 )
                 response.raise_for_status()
                 if response.status_code != 200:
-                    raise ValueError(f"❌ Failed to get embedding: {response.status_code}, {response.text}")
+                    raise ValueError(f"[❌ {self.__class__.__name__}] Failed to get embedding: {response.status_code}, {response.text}")
                 embedding = response.json()
-                self.logger.debug(f"✅ Embedding response for text \'{text}\': {embedding}")
+                self.logger.debug(f"[✅ {self.__class__.__name__}] Embedding response for text \'{text}\': {embedding}")
                 if not isinstance(embedding, list):
-                    raise ValueError(f"❌ Unexpected response format: {embedding}")
+                    raise ValueError(f"[❌ {self.__class__.__name__}] Unexpected response format: {embedding}")
                 return embedding
             except requests.exceptions.HTTPError as http_err:
-                self.logger.warning(f"❌ HTTP error occurred: {http_err}. Retrying {attempt + 1}/{self.__retry_max_retries}...")
+                self.logger.warning(f"[❌ {self.__class__.__name__}] HTTP error occurred: {http_err}. Retrying {attempt + 1}/{self.__retry_max_retries}...")
             except requests.exceptions.RequestException as err:
-                self.logger.warning(f"❌ Error occurred: {err}. Retrying {attempt + 1}/{self.__retry_max_retries}...")
+                self.logger.warning(f"[❌ {self.__class__.__name__}] Error occurred: {err}. Retrying {attempt + 1}/{self.__retry_max_retries}...")
             time.sleep(self.__retry_backoff_factor * (2 ** attempt))  # Exponential backoff
-        raise ValueError("❌ Max retries exceeded. Failed to get embedding.")
+        raise ValueError(f"[❌ {self.__class__.__name__}] Max retries exceeded. Failed to get embedding.")
     def similarity(self, text1: str, text2: str) -> float:
         """
         Calculate the similarity between two texts using the Hugging Face model.
