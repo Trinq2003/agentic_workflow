@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import yaml
+import logging
 from typing import Any, Dict, List
 
 class Configuration(ABC):
@@ -18,6 +19,8 @@ class Configuration(ABC):
             }
         
         self._sensitive_properties: List[str] = []  # Define sensitive properties
+        logging.debug(f"[🔧 {self.__class__.__name__}] List of {self.__class__.__name__}'s properties: {self._properties.keys()}")
+        logging.debug(f"[🔧 {self.__class__.__name__}] List of {self.__class__.__name__}'s sensitive properties: {self._sensitive_properties}")
 
     @property
     def sensitive_properties(self) -> List[str]:

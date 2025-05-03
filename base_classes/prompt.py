@@ -1,9 +1,12 @@
 from abc import ABC, abstractmethod
 from openai.types.chat import ChatCompletionMessageParam
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Required, Union, Literal, TypedDict, TypeVar, Generic
 
-class ICIOPrompt(ChatCompletionMessageParam):
+class ICIOPrompt(TypedDict, total=False):
     """A class representing a single prompt message with ICIO components."""
+    content: Required[str]
+    role: Required[Literal["user", "developer", "assistant", "system", "tool"]]
+    
     _instruction: str
     _context: str
     _input_indicator: str
@@ -15,7 +18,6 @@ class ICIOPrompt(ChatCompletionMessageParam):
         input_indicator: str="",
         output_indicator: str="",
         role: str = "user",
-        **kwargs: Any
     ) -> None:
         """
         Initialize a ICIOPrompt with ICIO components.
@@ -39,7 +41,8 @@ class ICIOPrompt(ChatCompletionMessageParam):
             content += f"<output_indicator>\n{output_indicator}\n</output_indicator>"
         
         # Initialize the parent ChatCompletionMessageParam
-        super().__init__(content=content, role=role, **kwargs)
+        self.content = content.strip()
+        self.role = role
         
         # Store ICIO components as private attributes
         self._instruction = instruction

@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Self
-import logging
 from torch import Tensor
 
 from configuration.embedding_inference_configuration import EmbeddingModelConfiguration
@@ -30,7 +29,7 @@ class AbstractEmbeddingModel(SystemComponent):
         :param cache: Flag to determine whether to cache responses. Defaults to False.
         :type cache: bool
         """
-        self.logger = logging.getLogger(self.__class__.__name__)
+        super().__init__()
         self.load_config(embedding_model_config)
         self._model_name: str = self._config.model_model_name
         self._max_tokens: int = self._config.model_max_tokens
@@ -40,7 +39,7 @@ class AbstractEmbeddingModel(SystemComponent):
         self._identical_threshold: float = self._config.model_identical_threshold
         
         if self._emb_id in self.__class__._emb_instances_by_id.keys():
-            raise ValueError(f"❌ Embedding ID {self._emb_id} is already initiated.")
+            raise ValueError(f"[❌ {self.__class__.__name__}] Embedding ID {self._emb_id} is already initiated.")
         else:
             self.__class__._emb_instances_by_id[self._emb_id] = self
 
@@ -92,7 +91,7 @@ class AbstractEmbeddingModel(SystemComponent):
         """
         self._config = embedding_model_config
 
-        self.logger.debug(f"Config loaded.")
+        self.logger.info(f"[✅ {self.__class__.__name__}] Embedding config loaded: {self._config.emb_id}")
     
     @abstractmethod
     def _load_model(self) -> None:

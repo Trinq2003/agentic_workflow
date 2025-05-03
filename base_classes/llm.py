@@ -1,6 +1,5 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import List, Dict, Union, Any, Iterable, Self
-import logging
 from openai.types.chat import ChatCompletion
 from openai import OpenAI
 
@@ -34,8 +33,8 @@ class AbstractLanguageModel(SystemComponent):
         :param llm_config: The LLM configuration object.
         :type llm_config: LLMConfiguration
         """
-        self.logger = logging.getLogger(self.__class__.__name__)
-
+        super().__init__()
+        
         self.load_config(llm_config)
 
         self._llm_id: str = "LLM | " + self._config.llm_id
@@ -55,9 +54,9 @@ class AbstractLanguageModel(SystemComponent):
         self._query_call_count: int = 0
         
         self._load_model()
-        
+        self.logger.debug(f"[🔧 {self.__class__.__name__}] LLM ID: {self._llm_id}")
         if self._llm_id in self.__class__._llm_instances_by_id.keys():
-            raise ValueError(f"LLM ID {self._llm_id} is already initiated.")
+            raise ValueError(f"[❌ {self.__class__.__name__}] LLM ID {self._llm_id} is already initiated.")
         else:
             self.__class__._llm_instances_by_id[self._llm_id] = self
     @classmethod
@@ -114,7 +113,7 @@ class AbstractLanguageModel(SystemComponent):
         :type llm_config: LLMConfiguration
         """
         self._config = llm_config
-        self.logger.debug(f"Config loaded.")
+        self.logger.info(f"[✅ {self.__class__.__name__}] LLM config loaded: {self._config.llm_id}")
     
     @abstractmethod
     def _load_model(self) -> None:

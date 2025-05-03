@@ -28,7 +28,7 @@ class AbstractTool(SystemComponent):
         :param tool_config: The tool configuration object.
         :type tool_config: ToolConfiguration
         """
-        self.logger = logging.getLogger(self.__class__.__name__)
+        super().__init__()
 
         self.load_config(tool_config)
         
@@ -71,7 +71,7 @@ class AbstractTool(SystemComponent):
         :type tool_config: ToolConfiguration
         """
         self._config = tool_config
-        self.logger.debug(f"Config loaded.")
+        self.logger.info(f"✅ Tool config loaded: {self._config.tool_id}")
 
     def execute(self, **kwargs) -> Any:
         """
@@ -106,11 +106,3 @@ class AbstractTool(SystemComponent):
         Must be implemented by subclasses.
         """
         pass
-    
-    # @abstractmethod
-    # def teardown(self) -> None:
-    #     """
-    #     Abstract method to clean up resources after execution.
-    #     Must be implemented by subclasses.
-    #     """
-    #     pass
