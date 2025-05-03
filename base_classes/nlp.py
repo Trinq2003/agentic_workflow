@@ -19,9 +19,11 @@ class AbstractNLPModel(SystemComponent):
         self.load_config()
         self._nlp_model_id: str = "NLP | " + self._config.nlp_id
         self._model_name: str = self._config.model_name
+        self.logger.debug(f"NLP model ID: {self._nlp_model_id}")
         
         if self._nlp_model_id in self.__class__._nlp_model_by_id.keys():
-            raise ValueError(f"❌ NLP Model ID {self._nlp_model_id} is already initiated.")
+            self.logger.error(f"NLP Model ID {self._nlp_model_id} is already initiated.")
+            raise ValueError(f"NLP Model ID {self._nlp_model_id} is already initiated.")
         else:
             self.__class__._nlp_model_by_id[self._nlp_model_id] = self
         

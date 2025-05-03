@@ -54,9 +54,10 @@ class AbstractLanguageModel(SystemComponent):
         self._query_call_count: int = 0
         
         self._load_model()
-        self.logger.debug(f"[🔧 {self.__class__.__name__}] LLM ID: {self._llm_id}")
+        self.logger.debug(f"LLM ID: {self._llm_id}")
         if self._llm_id in self.__class__._llm_instances_by_id.keys():
-            raise ValueError(f"[❌ {self.__class__.__name__}] LLM ID {self._llm_id} is already initiated.")
+            self.logger.error(f"LLM ID {self._llm_id} is already initiated.")
+            raise ValueError(f"LLM ID {self._llm_id} is already initiated.")
         else:
             self.__class__._llm_instances_by_id[self._llm_id] = self
     @classmethod
@@ -113,7 +114,7 @@ class AbstractLanguageModel(SystemComponent):
         :type llm_config: LLMConfiguration
         """
         self._config = llm_config
-        self.logger.info(f"[✅ {self.__class__.__name__}] LLM config loaded: {self._config.llm_id}")
+        self.logger.info(f"✅ LLM config loaded: {self._config.llm_id}")
     
     @abstractmethod
     def _load_model(self) -> None:

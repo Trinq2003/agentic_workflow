@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from openai.types.chat import ChatCompletionMessageParam
 from typing import List, Dict, Any, Optional, Required, Union, Literal, TypedDict, TypeVar, Generic
+import logging
 
 class ICIOPrompt(TypedDict, total=False):
     """A class representing a single prompt message with ICIO components."""
@@ -49,6 +50,8 @@ class ICIOPrompt(TypedDict, total=False):
         self._context = context
         self._input_indicator = input_indicator
         self._output_indicator = output_indicator
+        
+        
 
     # Getters
     @property
@@ -120,7 +123,7 @@ class AbstractPrompt(ABC):
     """Abstract base class for prompts composed of ChatCompletionMessageParam objects."""
     
     prompt: List[ChatCompletionMessageParam] = None
-    
+    logger: logging.Logger
     def __init__(self, prompt: List[ChatCompletionMessageParam]) -> None:
         """
         Initialize the AbstractPrompt instance with a list of ChatCompletionMessageParam objects.
@@ -129,3 +132,4 @@ class AbstractPrompt(ABC):
         :type prompt: List[ChatCompletionMessageParam]
         """
         self.prompt = prompt
+        self.logger = logging.getLogger(self.__class__.__name__)

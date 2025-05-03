@@ -42,7 +42,7 @@ class RequestEmbeddingModel(AbstractEmbeddingModel):
         if response.status_code != 200:
             
             raise ValueError(f"[❌ {self.__class__.__name__}] Failed to connect to API embedding model: {response.status_code}, {response.text}")
-        self.logger.info(f"[✅ {self.__class__.__name__}] API embedding model loaded successfully from {self.__emb_api_api_base}")
+        self.logger.info(f"✅ API embedding model loaded successfully from {self.__emb_api_api_base}")
     
     def encode(self, text: str) -> List:
         """
@@ -69,7 +69,7 @@ class RequestEmbeddingModel(AbstractEmbeddingModel):
                 if response.status_code != 200:
                     raise ValueError(f"[❌ {self.__class__.__name__}] Failed to get embedding: {response.status_code}, {response.text}")
                 embedding = response.json()
-                self.logger.debug(f"[✅ {self.__class__.__name__}] Embedding response for text \'{text}\': {embedding}")
+                self.logger.debug(f"✅ Embedding response for text \'{text}\': {embedding}")
                 if not isinstance(embedding, list):
                     raise ValueError(f"[❌ {self.__class__.__name__}] Unexpected response format: {embedding}")
                 return embedding

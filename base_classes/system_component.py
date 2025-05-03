@@ -1,10 +1,10 @@
-from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Self
 import logging
 
 from base_classes.configuration import Configuration
+from base_classes.logger import HasLoggerClass
 
-class SystemComponent(ABC):
+class SystemComponent(HasLoggerClass):
     """Abstract base class that defines the interface for all system components."""
     _config: Configuration = None
     _component_id: str = None
@@ -16,11 +16,12 @@ class SystemComponent(ABC):
         :param config: The system component configuration object.
         :type config: Dict[str, Any]
         """
-        self.logger = logging.getLogger(self.__class__.__name__)
+        super().__init__()
         self._component_id = "SYSTEM_COMPONENT | " + str(int(list(self._component_instances_by_id.keys())[-1].split(" | ")[1])) if self._component_instances_by_id.keys() else "SYSTEM_COMPONENT | 0"
-        self.logger.debug(f"[🔧 {self.__class__.__name__}] System Component ID: {self._component_id} | Component type: {self.__class__}")
+        self.logger.debug(f"System Component ID: {self._component_id} | Component type: {self.__class__}")
         if self._component_id in self.__class__._component_instances_by_id.keys():
-            raise ValueError(f"[❌ {self.__class__.__name__}] System Component ID {self._component_id} is already initiated.")
+            self.logger.error(f"System Component ID {self._component_id} is already initiated.")
+            raise ValueError(f"System Component ID {self._component_id} is already initiated.")
         else:
             self.__class__._component_instances_by_id[self._component_id] = self
     

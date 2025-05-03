@@ -39,7 +39,8 @@ class AbstractEmbeddingModel(SystemComponent):
         self._identical_threshold: float = self._config.model_identical_threshold
         
         if self._emb_id in self.__class__._emb_instances_by_id.keys():
-            raise ValueError(f"[❌ {self.__class__.__name__}] Embedding ID {self._emb_id} is already initiated.")
+            self.logger.error(f"Embedding ID {self._emb_id} is already initiated.")
+            raise ValueError(f"Embedding ID {self._emb_id} is already initiated.")
         else:
             self.__class__._emb_instances_by_id[self._emb_id] = self
 
@@ -91,7 +92,7 @@ class AbstractEmbeddingModel(SystemComponent):
         """
         self._config = embedding_model_config
 
-        self.logger.info(f"[✅ {self.__class__.__name__}] Embedding config loaded: {self._config.emb_id}")
+        self.logger.info(f"✅ Embedding config loaded: {self._config.emb_id}")
     
     @abstractmethod
     def _load_model(self) -> None:
