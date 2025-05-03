@@ -46,15 +46,15 @@ class AzureOpenAILLM(AbstractLanguageModel):
                     api_version=self._config.llm_api_api_version,
                     max_retries=self._config.retry_max_retries
                 )
-                print(f"✅ Model loaded successfully: {self._model_name}")
+                self.logger.info(f"✅ Azure OpenAI model loaded successfully: {self._model_name}")
             else:
                 self._llm_model = None
-                print(f"❌ Failed to load model, status code: {response.status_code}, Response: {response.text}")
+                self.logger.error(f"❌ Failed to load Azure OpenAI model, status code: {response.status_code}, Response: {response.text}")
         except requests.exceptions.RequestException as e:
             self._llm_model = None
-            print(f"❌ Error loading model: {str(e)}")
+            self.logger.error(f"❌ Error loading Azure OpenAI model: {str(e)}")
 
-    def _query(self, query: Iterable[ChatCompletionMessageParam], num_responses: int = 1) -> ChatCompletion:
+    def _query(self, query: Iterable[ChatCompletionMessageParam], num_responses: int = 1, stop: List[str] = ["\n"]) -> ChatCompletion:
         """
         Query the OpenAI language model using message-based input format.
 
@@ -71,10 +71,11 @@ class AzureOpenAILLM(AbstractLanguageModel):
                 messages=query,
                 max_tokens=self._max_tokens,
                 temperature=self._temperature,
-                n=num_responses  # Number of responses to return
+                n=num_responses, # Number of responses to return
+                stop=stop
             )
             
             return response  # Return the list of responses
         except Exception as e:
-            self.logger.error(f"Error querying OpenAI model: {str(e)}")
+            self.logger.error(f"❌ Error querying Azure OpenAI model: {str(e)}")
             return None
