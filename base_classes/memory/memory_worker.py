@@ -14,6 +14,7 @@ from base_classes.prompt import ICIOPrompt
 from base_classes.memory.memory_topic import AbstractMemoryTopic
 from base_classes.memory.management_term import MemoryBlockState
 from base_classes.memory.memory_stack import AbstractMemoryStack
+from base_classes.logger import HasLoggerClass
 
 MULTITURN_INPUT_REFINEMENT_PROMPT = """
 You are an advanced conversational AI designed for multiturn refinement interactions. Your goal is to provide coherent, logical, concise, and clear responses that progressively refine and improve based on user feedback and context. Follow these guidelines for every interaction:
@@ -74,7 +75,7 @@ Refined Output: AI (Rewritten): “In cancer diagnostics, AI leverages machine l
 Your rewritten output should ensure the conversation feels fluid and responsive, refining the last response to be a coherent, accurate, and valuable continuation of the multiturn dialogue.
 """
 
-class MemoryWorker:
+class MemoryWorker(HasLoggerClass):
     _llm: AbstractLanguageModel
     _emb_model: AbstractEmbeddingModel
     _nlp: AbstractNLPModel
@@ -100,6 +101,7 @@ class MemoryWorker:
         self._llm = llm
         self._emb_model = emb_model
         self._nlp = nlp
+        super().__init__()
     
     # Memory block context refinement methods
     def refine_input_query(self, mem_block: AbstractMemoryBlock) -> None:

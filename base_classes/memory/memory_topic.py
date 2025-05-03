@@ -4,8 +4,9 @@ from typing import Dict, List, Self, Any
 from base_classes.memory.memory_features import MemoryTopicFeature
 from base_classes.memory.memory_block import AbstractMemoryBlock
 from base_classes.traceable_item import TimeTraceableItem
+from base_classes.logger import HasLoggerClass
 
-class AbstractMemoryTopic(TimeTraceableItem):
+class AbstractMemoryTopic(TimeTraceableItem, HasLoggerClass):
     _mem_topic_id: uuid.UUID
     _chain_of_memblocks: List[AbstractMemoryBlock]
     identifying_features: MemoryTopicFeature = {}
@@ -16,6 +17,7 @@ class AbstractMemoryTopic(TimeTraceableItem):
     _memtopic_instances_by_id: Dict[uuid.UUID, Self] = {}
     
     def __init__(self):
+        super().__init__()
         self._mem_topic_id: uuid.UUID = uuid.uuid4()
         self._chain_of_memblocks: List[AbstractMemoryBlock] = []
         

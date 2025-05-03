@@ -7,8 +7,9 @@ from base_classes.memory.management_term import MemoryBlockState
 from base_classes.prompt import AbstractPrompt
 from base_classes.system_component import SystemComponent
 from base_classes.traceable_item import TimeTraceableItem
+from base_classes.logger import HasLoggerClass
 
-class AbstractMemoryBlock(TimeTraceableItem):
+class AbstractMemoryBlock(TimeTraceableItem, HasLoggerClass):
     """
     The AbstractMemoryBlock class represents a collection of AbstractMemoryAtom instances.
     It serves as a container for storing chains of conversations or actions, providing a structured 
@@ -32,11 +33,13 @@ class AbstractMemoryBlock(TimeTraceableItem):
     
     _memblock_instances_by_id: Dict[uuid.UUID, Self] = {}
     def __init__(self):
+        super().__init__()
         self._mem_block_id: uuid.UUID = uuid.uuid4()
         self._memory_atoms: List[AbstractMemoryAtom] = []
         self._mem_block_state: MemoryBlockState = MemoryBlockState.EMPTY
         
         if self._mem_block_id in self.__class__._memblock_instances_by_id.keys():
+            self.logger.error(f"Memory Block ID {self._mem_block_id} is already initiated.")
             raise ValueError(f"❌ Memory Block ID {self._mem_block_id} is already initiated.")
         else:
             self.__class__._memblock_instances_by_id[self._mem_block_id] = self
@@ -146,6 +149,7 @@ class AbstractMemoryBlock(TimeTraceableItem):
     
     def _add_one_node_without_dependencies(self, memory_atom: AbstractMemoryAtom) -> None:
         if memory_atom.mem_atom_id in [ma_id.mem_atom_id for ma_id in self._memory_atoms]:
+            self.logger.error(f"Memory Atom with ID {memory_atom.mem_atom_id} had already existed in Memory Block {self._mem_block_id}.")
             raise ValueError(f"❌ Memory Atom with ID {memory_atom.mem_atom_id} had already existed in Memory Block {self._mem_block_id}.")
         else:
             self._memory_atoms.append(AbstractMemoryAtom.get_mematom_instance_by_id(memory_atom.mem_atom_id))

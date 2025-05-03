@@ -3,8 +3,9 @@ from typing import List, Dict, Any, Self
 
 from base_classes.memory.management_term import MemoryState
 from base_classes.traceable_item import TimeTraceableItem
+from base_classes.logger import HasLoggerClass
 
-class AbstractMemoryAtom(TimeTraceableItem):
+class AbstractMemoryAtom(TimeTraceableItem, HasLoggerClass):
     """
     Represents the smallest indivisible unit of memory within a hierarchical memory system. 
     The data contained within an AbstractMemoryAtom is treated as an atomic entity from various perspectives.
@@ -27,6 +28,7 @@ class AbstractMemoryAtom(TimeTraceableItem):
 
     _mematom_instances_by_id: Dict[uuid.UUID, Self] = {}
     def __init__(self, data: Any, required_atom: List[uuid.UUID] = [], requiring_atom: List[uuid.UUID] = []):
+        super().__init__()
         self._mem_atom_id: uuid.UUID = uuid.uuid4()
         self._data: Any = data
         self._required_atom: List[uuid.UUID] = required_atom
@@ -35,6 +37,7 @@ class AbstractMemoryAtom(TimeTraceableItem):
         self._state: MemoryState = MemoryState.USED
         
         if self._mem_atom_id in self.__class__._mematom_instances_by_id.keys():
+            self.logger.error(f"Memory Atom ID {self._mem_atom_id} is already initiated.")
             raise ValueError(f"❌ Memory Atom ID {self._mem_atom_id} is already initiated.")
         else:
             self.__class__._mematom_instances_by_id[self._mem_atom_id] = self
@@ -79,25 +82,6 @@ class AbstractMemoryAtom(TimeTraceableItem):
     @requiring_atom.setter
     def requiring_atom(self, requiring_atom: List[uuid.UUID]):
         self._requiring_atom = requiring_atom
-    
-    @classmethod
-    def get_mematom_ids(cls) -> List[uuid.UUID]:
-        """
-        Get the list of memory atom IDs.
-
-        :return: The list of memory atom IDs.
-        :rtype: List[uuid.UUID]
-        """
-        return cls._list_of_mematom_ids
-    @classmethod
-    def get_mematom_instance_by_id(cls, mem_atom_id: uuid.UUID) -> Self:
-        """
-        Retrieve an instance of the class by its ID.
-
-        :param id: The unique identifier of the instance.
-        :return: The instance if found, otherwise None.
-        """
-        return cls._mematom_instances_by_id.get(mem_atom_id, None)
         
     def __str__(self):
         # TODO: Change the wording method
