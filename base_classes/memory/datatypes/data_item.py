@@ -4,8 +4,6 @@ from datetime import datetime
 
 from base_classes.prompt import AbstractPrompt
 from base_classes.system_component import SystemComponent
-from base_classes.llm import AbstractLanguageModel
-from base_classes.operator import AbstractOperator
 
 class AbstractDataItem(ABC):
     _content: Any

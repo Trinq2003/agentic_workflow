@@ -29,11 +29,12 @@ class AbstractMemoryBlock(TimeTraceableItem, HasLoggerClass):
     _refined_output_response: str = "" # Refined output response after processing
     _mem_block_state: MemoryBlockState
     _access_count: int = 0 # Access count for the memory block    
-    _topic_container_id: uuid.UUID
+    _topic_container_id: uuid.UUID = None
     
     _memblock_instances_by_id: Dict[uuid.UUID, Self] = {}
     def __init__(self):
-        super().__init__()
+        TimeTraceableItem.__init__(self)
+        HasLoggerClass.__init__(self)
         self._mem_block_id: uuid.UUID = uuid.uuid4()
         self._memory_atoms: List[AbstractMemoryAtom] = []
         self._mem_block_state: MemoryBlockState = MemoryBlockState.EMPTY
@@ -146,6 +147,19 @@ class AbstractMemoryBlock(TimeTraceableItem, HasLoggerClass):
                 self._mem_atom_graph[memory_atom.mem_atom_id].append(requiring_atom_id)
                 
         self._sync_dependencies()
+        prompts = memory_atom.data.content.prompt
+        roles = set()
+        for prompt in prompts:
+            roles.add(prompt.get('role'))
+        
+        if "user" in roles:
+            if self.mem_block_state < MemoryBlockState.RAW_INPUT_ONLY:
+                self.mem_block_state = MemoryBlockState.RAW_INPUT_ONLY
+        if "assistant" in roles:
+            if self.mem_block_state < MemoryBlockState.RAW_INPUT_AND_OUTPUT:
+                self.mem_block_state = MemoryBlockState.RAW_INPUT_AND_OUTPUT
+        
+        self.logger.debug(f"Memory Block ID: {self._mem_block_id} | Memory Block state: {self.mem_block_state}")
     
     def _add_one_node_without_dependencies(self, memory_atom: AbstractMemoryAtom) -> None:
         if memory_atom.mem_atom_id in [ma_id.mem_atom_id for ma_id in self._memory_atoms]:

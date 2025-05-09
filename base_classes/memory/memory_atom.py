@@ -1,9 +1,10 @@
 import uuid
 from typing import List, Dict, Any, Self
 
-from base_classes.memory.management_term import MemoryState
+from base_classes.memory.management_term import MemoryState, MemoryAtomType
 from base_classes.traceable_item import TimeTraceableItem
 from base_classes.logger import HasLoggerClass
+from base_classes.memory.datatypes.data_item import PromptDataItem
 
 class AbstractMemoryAtom(TimeTraceableItem, HasLoggerClass):
     """
@@ -20,27 +21,38 @@ class AbstractMemoryAtom(TimeTraceableItem, HasLoggerClass):
         - Operator response
     """
     _mem_atom_id: uuid.UUID # Globlally unique identifier
-    _data: Any # Data stored in the memory atom
+    _data: PromptDataItem # Data stored in the memory atom
     _access_count: int
     _state: MemoryState
+    _type: MemoryAtomType # Type of the memory atom
     _required_atom: List[uuid.UUID] # List of memory atoms required for this atom to function
     _requiring_atom: List[uuid.UUID] # List of memory atoms requiring this atom to function
 
     _mematom_instances_by_id: Dict[uuid.UUID, Self] = {}
-    def __init__(self, data: Any, required_atom: List[uuid.UUID] = [], requiring_atom: List[uuid.UUID] = []):
-        super().__init__()
+    def __init__(self, data: PromptDataItem, required_atom: List[uuid.UUID] = [], requiring_atom: List[uuid.UUID] = []):
+        TimeTraceableItem.__init__(self)
+        HasLoggerClass.__init__(self)
         self._mem_atom_id: uuid.UUID = uuid.uuid4()
-        self._data: Any = data
+        self._data: PromptDataItem = data
         self._required_atom: List[uuid.UUID] = required_atom
         self._requiring_atom: List[uuid.UUID] = requiring_atom
         self._access_count: int = 0
         self._state: MemoryState = MemoryState.USED
+        prompt_role = self._data.content.prompt[0]['role']
+        if prompt_role == "user":
+            self._type: MemoryAtomType = MemoryAtomType.USER_INPUT
+        elif prompt_role == "assistant":
+            self._type: MemoryAtomType = MemoryAtomType.ASSISTANT_OUTPUT
+        elif prompt_role == "tool":
+            self._type: MemoryAtomType = MemoryAtomType.TOOL_EXECUTION
         
         if self._mem_atom_id in self.__class__._mematom_instances_by_id.keys():
             self.logger.error(f"Memory Atom ID {self._mem_atom_id} is already initiated.")
             raise ValueError(f"❌ Memory Atom ID {self._mem_atom_id} is already initiated.")
         else:
             self.__class__._mematom_instances_by_id[self._mem_atom_id] = self
+        
+        self.logger.debug(f"Memory Atom ID: {self._mem_atom_id} | Memory Atom type: {self._type}; Memory Atom state: {self._state}")
             
     @classmethod
     def get_mematom_ids(cls) -> List[uuid.UUID]:
@@ -73,6 +85,9 @@ class AbstractMemoryAtom(TimeTraceableItem, HasLoggerClass):
     @property
     def required_atom(self):
         return self._required_atom
+    @property
+    def data(self):
+        return self._data
     @required_atom.setter
     def required_atom(self, required_atom: List[uuid.UUID]):
         self._required_atom = required_atom
