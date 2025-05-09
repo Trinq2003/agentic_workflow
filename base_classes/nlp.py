@@ -16,7 +16,8 @@ class AbstractNLPModel(SystemComponent):
     _model_name: str = None
 
     def __init__(self, nlp_config: NLPConfiguration):
-        self.load_config()
+        super().__init__()
+        self.load_config(nlp_config)
         self._nlp_model_id: str = "NLP | " + self._config.nlp_id
         self._model_name: str = self._config.model_name
         self.logger.debug(f"NLP model ID: {self._nlp_model_id}")
