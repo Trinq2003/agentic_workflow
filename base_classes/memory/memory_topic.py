@@ -17,11 +17,13 @@ class AbstractMemoryTopic(TimeTraceableItem, HasLoggerClass):
     _memtopic_instances_by_id: Dict[uuid.UUID, Self] = {}
     
     def __init__(self):
-        super().__init__()
+        HasLoggerClass.__init__(self)
+        TimeTraceableItem.__init__(self)
         self._mem_topic_id: uuid.UUID = uuid.uuid4()
         self._chain_of_memblocks: List[AbstractMemoryBlock] = []
         
         if self._mem_topic_id in self.__class__._memtopic_instances_by_id.keys():
+            self.logger.error(f"❌ Memory Topic ID {self._mem_topic_id} is already initiated.")
             raise ValueError(f"❌ Memory Topic ID {self._mem_topic_id} is already initiated.")
         else:
             self.__class__._memtopic_instances_by_id[self._mem_topic_id] = self
@@ -35,7 +37,8 @@ class AbstractMemoryTopic(TimeTraceableItem, HasLoggerClass):
     
     def insert_mem_block(self, mem_block: AbstractMemoryBlock) -> None:
         self._chain_of_memblocks.append(mem_block)
-        mem_block.topic_container_id(self._mem_topic_id)
+        mem_block.topic_container_id = self._mem_topic_id
+        self.logger.debug(f"Inserted Memory Block ID {mem_block.mem_block_id} into Memory Topic {self._mem_topic_id}. New MemBlock's topic conatiner ID: {mem_block.topic_container_id}.")
     def get_address_of_block_by_id(self, mem_block_id: uuid.UUID) -> int:
         for index, mem_block in enumerate(self._chain_of_memblocks):
             if mem_block.mem_block_id == mem_block_id:
