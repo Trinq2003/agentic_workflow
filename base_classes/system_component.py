@@ -17,7 +17,7 @@ class SystemComponent(HasLoggerClass):
         :type config: Dict[str, Any]
         """
         super().__init__()
-        self._component_id = "SYSTEM_COMPONENT | " + str(int(list(self._component_instances_by_id.keys())[-1].split(" | ")[1])) if self._component_instances_by_id.keys() else "SYSTEM_COMPONENT | 0"
+        self._component_id = "SYSTEM_COMPONENT | " + str(int(list(self.__class__._component_instances_by_id.keys())[-1].split(" | ")[1])+1) if self._component_instances_by_id.keys() else "SYSTEM_COMPONENT | 0"
         self.logger.debug(f"System Component ID: {self._component_id} | Component type: {self.__class__}")
         if self._component_id in self.__class__._component_instances_by_id.keys():
             self.logger.error(f"System Component ID {self._component_id} is already initiated.")

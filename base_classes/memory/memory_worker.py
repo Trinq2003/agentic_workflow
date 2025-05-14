@@ -98,10 +98,12 @@ class MemoryWorker(HasLoggerClass):
         :param llm_config: The LLM configuration object.
         :type llm_config: LLMConfiguration
         """
+        super().__init__()
         self._llm = llm
         self._emb_model = emb_model
         self._nlp = nlp
-        super().__init__()
+        
+        self.logger.debug(f"Memory Worker initialized with LLM: {self._llm}, Embedding Model: {self._emb_model}, NLP Model: {self._nlp}.")
     
     # Memory block context refinement methods
     def refine_input_query(self, mem_block: AbstractMemoryBlock) -> None:
