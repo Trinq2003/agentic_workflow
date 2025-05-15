@@ -1,1 +1,2 @@
-pip install "annotated_docs @ git+https://git@github.com/peterroelants/annotated-docs.git@v0.0.4"
+mcp
+openai
