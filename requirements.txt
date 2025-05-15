@@ -1,2 +1,6 @@
 mcp
 openai
+torch
+numpy
+spacy
+underthesea
