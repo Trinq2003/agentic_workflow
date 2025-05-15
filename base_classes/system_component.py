@@ -1,5 +1,4 @@
 from typing import List, Dict, Any, Self
-import logging
 
 from base_classes.configuration import Configuration
 from base_classes.logger import HasLoggerClass
