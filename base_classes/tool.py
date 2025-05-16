@@ -1,8 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Optional, List, Dict, Self, Any, Union
-import logging
-import requests
-import json
+from typing import Optional, List, Dict, Self, Any
+import aiohttp
 
 from configuration.tool_configuration import ToolConfiguration
 from base_classes.system_component import SystemComponent
@@ -75,9 +73,18 @@ class AbstractTool(SystemComponent):
         self._config = tool_config
         self.logger.info(f"✅ Tool config loaded: {self._config.tool_id}")
 
-    def execute(self, **kwargs) -> Any:
+    async def execute(self, **kwargs) -> Optional[Any]:
         """
-        Abstract method to execute the tool.
+        Execute the tool by making an asynchronous HTTP request to a webhook.
+
+        Args:
+            **kwargs: Keyword arguments to set tool data.
+
+        Returns:
+            Optional[Any]: JSON response from the webhook or None if the request fails.
+
+        Raises:
+            ValueError: If the HTTP method is unsupported.
         """
         self._set_tool_data(**kwargs)
         
@@ -87,19 +94,21 @@ class AbstractTool(SystemComponent):
         if self._headers_authorization:
             headers["Authorization"] = self._headers_authorization
         
-        try:
-            if self._webhook_method == "POST":
-                response = requests.post(url, headers=headers, data=json.dumps(self._data))
-            elif self._webhook_method == "GET":
-                response = requests.get(url, headers=headers, params=self._data)
-            else:
-                raise ValueError(f"Unsupported HTTP method: {self._webhook_method}")
-            
-            response.raise_for_status()
-            return response.json()
-        except requests.exceptions.RequestException as e:
-            print(f"Error calling webhook: {e}")
-            return None
+        async with aiohttp.ClientSession() as session:
+            try:
+                if self._webhook_method == "POST":
+                    async with session.post(url, headers=headers, json=self._data) as response:
+                        response.raise_for_status()
+                        return await response.json()
+                elif self._webhook_method == "GET":
+                    async with session.get(url, headers=headers, params=self._data) as response:
+                        response.raise_for_status()
+                        return await response.json()
+                else:
+                    raise ValueError(f"Unsupported HTTP method: {self._webhook_method}")
+            except aiohttp.ClientError as e:
+                print(f"Error calling webhook: {e}")
+                return None
     
     @abstractmethod
     def _set_tool_data(self, **kwargs) -> None:

@@ -1,10 +1,7 @@
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List
 
 from base_classes.tool import AbstractTool
 from configuration.tool_configuration import ToolConfiguration
-from prompt.user_message import UserMessagePrompt
-from prompt.assistant_message import AssistantMessagePrompt
-from graph.path import ToolPath
 
 class PythonCodeRunnerTool(AbstractTool):
     """
@@ -16,11 +13,11 @@ class PythonCodeRunnerTool(AbstractTool):
     def _set_tool_data(self, input_code_list: List[Dict[str, str]]) -> None:
         self._data = input_code_list
     
-    def execute(self, input_code_list: List[Dict[str, str]]) -> List[Dict[str, Any]]:
+    async def execute(self, input_code_list: List[Dict[str, str]]) -> List[Dict[str, Any]]:
         """
         This method is used to execute the tool chooser tool, which returns the tool ID to be used for the given prompt.
         
         :return: A graph of the tools to be used for the given prompt.
         :rtype: ToolPath
         """
-        return super().execute(input_code_list = input_code_list)
+        return await super().execute(input_code_list = input_code_list)
