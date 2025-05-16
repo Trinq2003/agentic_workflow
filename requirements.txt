@@ -4,3 +4,5 @@ torch
 numpy
 spacy
 underthesea
+aiohttp
+PyYAML
