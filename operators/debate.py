@@ -32,8 +32,30 @@ class DebateOperator(AbstractOperator):
                 AbstractLanguageModel(self._config.debate_config.get(f"debater_{i + 1}", {})['llm_id'])
             )
     
+    def _construct_debate_message(self, agent_contexts, question, idx):
+        constructed_message = "These are the solutions to the problem from other agents:\n"
+        for agent_id, agent in enumerate(agent_contexts):
+            agent_response = agent[idx]["content"]
+            response_parsed = f"Solution and reasoning from agent {agent_id + 1}:\n{agent_response}\n"
+
+            constructed_message += response_parsed
+
+        constructed_message += """\n\n Using the reasoning from other agents as additional advice, can you give an updated answer? Examine your solution and that other agents step by step.""".format(question)
+        constructed_message_obj =  {"role": "user", "content": constructed_message}
+        self.logger.debug(f"Constructed message: {constructed_message_obj}")
+        return constructed_message_obj
+    
     def run(self, input_message: Union[UserMessagePrompt, AssistantMessagePrompt]) -> AssistantMessagePrompt:
+        self.memory_block: AbstractMemoryBlock = AbstractMemoryBlock()
+        
+        # Store the input message in memory block
+        input_message_mem_atom = AbstractMemoryAtom(
+            data=PromptDataItem(content=input_message, source="user")
+        )
+        self.memory_block.add_memory_atom(input_message_mem_atom)
+        
         debate_contexts: List[List[Dict]] = [[{"role": "user", "content": input_message.text}] for debater in range(self._num_of_debaters)]
+        debate_mem_atoms: List[List[AbstractMemoryAtom]] = [[] for _ in range(self._num_of_rounds)]
         self.logger.debug(f"Debate contexts: {debate_contexts}")
         for round in range(self._num_of_rounds):
             import concurrent.futures
@@ -49,6 +71,22 @@ class DebateOperator(AbstractOperator):
                 self.logger.debug(f"Debater {i + 1} response: {assistant_message.text}")
                 debate_context.append(assistant_message)
                 
+                # Store the assistant message in memory block
+                assistant_message_mem_atom = AbstractMemoryAtom(
+                    data=PromptDataItem(content=assistant_message, source=self._list_of_debaters[i])
+                )
+                self.memory_block.add_memory_atom(assistant_message_mem_atom)
+                debate_mem_atoms[round].append(assistant_message_mem_atom)
+                if round == 0:
+                    input_message_mem_atom.requiring_atom.append(assistant_message_mem_atom.mem_atom_id)
+                    assistant_message_mem_atom.required_atom.append(input_message_mem_atom.mem_atom_id)
+                else:
+                    for idx, mem_atom in enumerate(debate_mem_atoms[round - 1]):
+                        if idx == i:
+                            continue
+                        assistant_message_mem_atom.required_atom.append(mem_atom.mem_atom_id)
+                        mem_atom.requiring_atom.append(assistant_message_mem_atom.mem_atom_id)
+                
                 return debate_context
             
             self.logger.debug(f"Start debate round {round + 1} with {len(debate_contexts)} debaters working in parallel.")
@@ -57,15 +95,3 @@ class DebateOperator(AbstractOperator):
                 debate_contexts = results
                 self.logger.debug(f"Debate round {round + 1} result: {debate_contexts}")
         
-    def _construct_debate_message(self, agent_contexts, question, idx):
-        constructed_message = "These are the solutions to the problem from other agents:\n"
-        for agent_id, agent in enumerate(agent_contexts):
-            agent_response = agent[idx]["content"]
-            response_parsed = f"Solution and reasoning from agent {agent_id + 1}:\n{agent_response}\n"
-
-            constructed_message += response_parsed
-
-        constructed_message += """\n\n Using the reasoning from other agents as additional advice, can you give an updated answer? Examine your solution and that other agents step by step.""".format(question)
-        constructed_message_obj =  {"role": "user", "content": constructed_message}
-        self.logger.debug(f"Constructed message: {constructed_message_obj}")
-        return constructed_message_obj
