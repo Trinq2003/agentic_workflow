@@ -36,7 +36,7 @@ class OperatorConfiguration(Configuration):
             ['execution.backoff_factor', 2, int], # Execution backoff
         ]
 
-class CoTOperatorConfiguration(Configuration):
+class CoTOperatorConfiguration(OperatorConfiguration):
     """
     Configuration class for CoT operator.
     """
@@ -52,7 +52,7 @@ class CoTOperatorConfiguration(Configuration):
         """
         return []
 
-class ReActOperatorConfiguration(Configuration):
+class ReActOperatorConfiguration(OperatorConfiguration):
     """
     Configuration class for CoT operator.
     """
@@ -75,12 +75,13 @@ class ReActOperatorConfiguration(Configuration):
             ['max_iterations', 10, int], # Max iterations
         ]
         
-class DebateOperatorConfiguration(Configuration):
+class DebateOperatorConfiguration(OperatorConfiguration):
     """
     Configuration class for CoT operator.
     """
     debate_num_of_round: int
     debate_num_of_debaters: int
+    debate_config: Dict[str, Any]
     def __init__(self):
         super().__init__()
         sensitive_properties = []
@@ -94,4 +95,28 @@ class DebateOperatorConfiguration(Configuration):
         return [
             ['debate.num_of_round', '', int], # Number of rounds
             ['debate.num_of_debaters', '', int], # Number of debaters
+            ['debate.config', {}, dict], # Debate configuration
+        ]
+
+class SelfConsistencyOperatorConfiguration(OperatorConfiguration):
+    """
+    Configuration class for Self-Consistency operator.
+    """
+    self_consistency_num_of_samples: int
+    self_consistency_num_of_iterations: int
+    self_consistency_config: Dict[str, Any]
+    
+    def __init__(self):
+        super().__init__()
+        sensitive_properties = []
+        self.sensitive_properties = [property_.replace('.', '_') for property_ in sensitive_properties]
+
+
+    def _init_properties(self):
+        """
+        Define properties for Self-Consistency operator.
+        """
+        return [
+            ['self_consistency.num_of_samples', 3, int], # Number of samples (or reasoning paths)
+            ['self_consistency.num_of_iterations', 2, int], # Number of iterations
         ]

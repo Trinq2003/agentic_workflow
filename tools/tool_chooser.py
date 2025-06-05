@@ -2,9 +2,6 @@ from typing import Any, Dict, List, Union
 
 from base_classes.tool import AbstractTool
 from configuration.tool_configuration import ToolConfiguration
-from prompt.user_message import UserMessagePrompt
-from prompt.assistant_message import AssistantMessagePrompt
-from graph.path import ToolPath
 
 class ToolChooserTool(AbstractTool):
     """

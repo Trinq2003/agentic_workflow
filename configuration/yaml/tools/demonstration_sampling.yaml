@@ -1,10 +1,13 @@
+tool_id: "demonstration_sampling"
+
 webhook:
-  base_url: "https://your-n8n-instance.com"
-  webhook_path: "/webhook/your-webhook-id"
+  base_url: "http://localhost:8080"
+  webhook_path: "webhook/15bda51a-cf8d-4fdd-8be9-40d5da99a7d0"
+  method: "POST"
 
 headers:
-  contentType: "application/json"
-  authorization: "Bearer your-api-key-here"
+  content_type: "application/json"
+  authorization: "Bearer no-key"
 
 payload:
   message:
