@@ -65,6 +65,7 @@ class SelfConsistencyOperator(AbstractOperator):
                 sc_prompt.extend(reasoning_paths)
                 sc_prompt.append({"role": "assistant", "content": "Carefully evaluate these solutions and identify the answer that appears most frequently across them. This consistency in answers is crucial for determining the most reliable solution."})
                 
+                # Store the reasoning path in memory block
                 reasoning_path = self._sc_llm.query(sc_prompt, num_responses=1)
                 reasoning_path_mem_atom = AbstractMemoryAtom(
                     data=PromptDataItem(content=reasoning_path, source=self._sc_llm)
