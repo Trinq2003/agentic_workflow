@@ -1,6 +1,6 @@
 from typing import Union, Dict, Any, List
 from collections.abc import Callable
-from annotated_docs.json_schema import as_json_schema
+# from annotated_docs.json_schema import as_json_schema
 import json
 
 from base_classes.operator import AbstractOperator
@@ -35,7 +35,7 @@ class ReactOperator(AbstractOperator):
         for callable_tool in callable_tools:
             tool = AbstractTool.get_tool_instance_by_id(tool_id = "TOOL | " + callable_tool)
             self._callable_tools[callable_tool] = {'tool': tool}
-            self._callable_tools[callable_tool]['description'] = as_json_schema(tool.__class__)
+            # self._callable_tools[callable_tool]['description'] = as_json_schema(tool.__class__)
         
         self._reasoning_llm = self._llm_component[0] # Only 1 LLM component is allowed for React operator.
         

@@ -21,6 +21,7 @@ class AbstractLanguageModel(SystemComponent):
     _max_tokens: int = None
     _cache: bool = None
     _cache_expiry: int = None
+    _stream: bool = None
     _response_cache: Dict[str, List[Any]] = {}
     prompt_tokens: int = None
     completion_tokens: int = None
@@ -43,7 +44,7 @@ class AbstractLanguageModel(SystemComponent):
         self._max_tokens: int = self._config.model_max_tokens
         self._cache: bool = self._config.cache_enabled
         self._cache_expiry: int = self._config.cache_cache_expiry
-
+        self._stream: bool = self._config.model_stream
         if self._cache:
             self._response_cache: Dict[str, List[Any]] = {}
 

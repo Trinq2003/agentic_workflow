@@ -8,9 +8,11 @@ class LLMConfiguration(Configuration):
     Contains common properties for both local and API-based deployments.
     """
     llm_id: str
+    model_provider: str
     model_model_name: str
     model_temperature: float
     model_max_tokens: int
+    model_stream: bool
     cache_enabled: Optional[bool]
     cache_cache_expiry: Optional[int]
     def __init__(self):
@@ -26,9 +28,11 @@ class LLMConfiguration(Configuration):
         """
         return [
             ['llm_id', '', str],  # ID of the LLM
+            ['model.provider', '', str],  # Model provider
             ['model.model_name', '', str],  # Model ID or path
             ['model.temperature', 1.0, float],  # Sampling temperature
             ['model.max_tokens', 0, int],  # Maximum tokens to generate
+            ['model.stream', False, bool],  # Enable streaming
             ['cache.enabled', True, bool],  # Enable response caching
             ['cache.cache_expiry', 3600, int],  # Cache expiry time in seconds
         ]
