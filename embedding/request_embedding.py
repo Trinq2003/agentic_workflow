@@ -2,26 +2,32 @@ from typing import List
 import torch
 import requests
 import time
+from langchain.embeddings import HuggingFaceEmbeddings, OpenAIEmbeddings, CohereEmbeddings
+from langchain.embeddings.base import Embeddings
+from langchain_community.embeddings import AzureOpenAIEmbeddings
+from langchain_community.embeddings import XinferenceEmbeddings
 
 from base_classes.embedding import AbstractEmbeddingModel
 from configuration.embedding_inference_configuration import APIEmbeddingModelConfiguration
 
 class RequestEmbeddingModel(AbstractEmbeddingModel):
     """
-    The HFEmbeddingModel class handles interactions with a Hugging Face deployed model.
+    The RequestEmbeddingModel class handles interactions with various embedding models through LangChain.
     It inherits from AbstractEmbeddingModel and implements the necessary methods.
     """
     _config: APIEmbeddingModelConfiguration = None
     def __init__(self, embedding_model_config: APIEmbeddingModelConfiguration) -> None:
         """
-        Initialize the HFEmbeddingModel instance with configuration, model details, and caching options.
+        Initialize the RequestEmbeddingModel instance with configuration and prepare the model.
         """
         super().__init__(embedding_model_config)
 
-        # Hugging Face specific parameters
+        # Configuration parameters
         self.logger.debug(f"List of APIEmbeddingModelConfiguration: {embedding_model_config.__dict__}")
         self.__emb_api_api_base: str = self._config.emb_api_api_base
         self.__emb_api_api_token: str = self._config.emb_api_api_token
+        self.__emb_api_api_version: str = self._config.emb_api_api_version
+        self.__emb_api_deployment_name: str = self._config.emb_api_deployment_name
         self.__emb_api_trust_remote_code: bool = self._config.emb_api_trust_remote_code
         self.__cost_prompt_token_cost: float = self._config.cost_prompt_token_cost
         self.__cost_response_token_cost: float = self._config.cost_response_token_cost
@@ -32,56 +38,63 @@ class RequestEmbeddingModel(AbstractEmbeddingModel):
 
     def _load_model(self):
         """
-        Load the Hugging Face inference model by verifying the API endpoint and token.
+        Load the embedding model using LangChain based on the configuration.
         """
-        headers = {
-            "Authorization": f"Bearer {self.__emb_api_api_token}",
-            "Content-Type": "application/json"
-        }
-        response = requests.get(f"{self.__emb_api_api_base}", headers=headers)
-        if response.status_code != 200:
-            
-            raise ValueError(f"[❌ {self.__class__.__name__}] Failed to connect to API embedding model: {response.status_code}, {response.text}")
-        self.logger.info(f"✅ API embedding model loaded successfully from {self.__emb_api_api_base}")
+        
+        if self._config.model_provider == "azure":
+            self._emb_model = AzureOpenAIEmbeddings(
+                azure_deployment=self.__emb_api_deployment_name,
+                openai_api_version=self.__emb_api_api_version,
+                azure_endpoint=self.__emb_api_api_base,
+                api_key=self.__emb_api_api_token
+            )
+        elif self._config.model_provider == "openai":
+            self._emb_model = OpenAIEmbeddings(
+                openai_api_key=self.__emb_api_api_token,
+                openai_api_base=self.__emb_api_api_base,
+                model=self._model_name
+            )
+        elif self._config.model_provider == "cohere":
+            self._emb_model = CohereEmbeddings(
+                cohere_api_key=self.__emb_api_api_token,
+                model=self._model_name
+            )
+        elif self._config.model_provider == "xinference":
+            self._emb_model = XinferenceEmbeddings(
+                model_name=self._model_name,
+                base_url=self.__emb_api_api_base,
+                api_key=self.__emb_api_api_token
+            )
+        else:
+            self._emb_model = HuggingFaceEmbeddings(
+                model_name=self._model_name,
+                model_kwargs={"trust_remote_code": self.__emb_api_trust_remote_code},
+                encode_kwargs={"normalize_embeddings": True}
+            )
+        
+        self.logger.info(f"✅ Embedding model loaded successfully: {self._model_name}")
     
     def encode(self, text: str) -> List:
         """
-        Generate embeddings for a given text using the Hugging Face model.
+        Generate embeddings for a given text using the LangChain model.
 
         :param text: Input text to embed.
         :return: List of floating point numbers representing the embedding.
         """
-        headers = {
-            "Authorization": f"Bearer {self.__emb_api_api_token}",
-            "Content-Type": "application/json"
-        }
-        payload = {
-            "inputs": text
-        }
         for attempt in range(self.__retry_max_retries):
             try:
-                response = requests.post(
-                    f"{self.__emb_api_api_base}",
-                    headers=headers,
-                    json=payload
-                )
-                response.raise_for_status()
-                if response.status_code != 200:
-                    raise ValueError(f"[❌ {self.__class__.__name__}] Failed to get embedding: {response.status_code}, {response.text}")
-                embedding = response.json()
-                self.logger.debug(f"✅ Embedding response for text \'{text}\': {embedding}")
-                if not isinstance(embedding, list):
-                    raise ValueError(f"[❌ {self.__class__.__name__}] Unexpected response format: {embedding}")
+                embedding = self._emb_model.embed_query(text)
+                self.logger.debug(f"✅ Embedding generated for text '{text}'")
                 return embedding
-            except requests.exceptions.HTTPError as http_err:
-                self.logger.warning(f"[❌ {self.__class__.__name__}] HTTP error occurred: {http_err}. Retrying {attempt + 1}/{self.__retry_max_retries}...")
-            except requests.exceptions.RequestException as err:
+            except Exception as err:
                 self.logger.warning(f"[❌ {self.__class__.__name__}] Error occurred: {err}. Retrying {attempt + 1}/{self.__retry_max_retries}...")
-            time.sleep(self.__retry_backoff_factor * (2 ** attempt))  # Exponential backoff
+                time.sleep(self.__retry_backoff_factor * (2 ** attempt))  # Exponential backoff
+        
         raise ValueError(f"[❌ {self.__class__.__name__}] Max retries exceeded. Failed to get embedding.")
+
     def similarity(self, text1: str, text2: str) -> float:
         """
-        Calculate the similarity between two texts using the Hugging Face model.
+        Calculate the similarity between two texts using the embedding model.
 
         :param text1: First input text.
         :param text2: Second input text.
@@ -89,4 +102,11 @@ class RequestEmbeddingModel(AbstractEmbeddingModel):
         """
         emb_text1 = self.encode(text1)
         emb_text2 = self.encode(text2)
-        return float(torch.nn.functional.cosine_similarity(torch.tensor(emb_text1), torch.tensor(emb_text2)).numpy())
+        
+        # Convert embeddings to tensors and add batch dimension
+        emb1_tensor = torch.tensor(emb_text1).unsqueeze(0)  # Shape: [1, dim]
+        emb2_tensor = torch.tensor(emb_text2).unsqueeze(0)  # Shape: [1, dim]
+        
+        # Calculate cosine similarity
+        similarity = torch.nn.functional.cosine_similarity(emb1_tensor, emb2_tensor, dim=1)
+        return float(similarity.item())

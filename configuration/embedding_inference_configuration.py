@@ -9,6 +9,7 @@ class EmbeddingModelConfiguration(Configuration):
     This includes shared properties for both API-based and locally deployed models.
     """
     emb_id: str
+    model_provider: str
     model_model_name: str
     model_max_tokens: int
     model_embedding_dims: int
@@ -25,6 +26,7 @@ class EmbeddingModelConfiguration(Configuration):
         """
         return [
             ['emb_id', '', str], # Embedding ID
+            ['model.provider', '', str], # Model provider
             ['model.model_name', '', str], # Model ID or path
             ['model.max_tokens', 0, int], # Maximum tokens to generate
             ['model.embedding_dims', 0, int], # Number of dimensions in the embedding
@@ -37,6 +39,8 @@ class APIEmbeddingModelConfiguration(EmbeddingModelConfiguration):
     """
     emb_api_api_base: str
     emb_api_api_token: str
+    emb_api_api_version: str
+    emb_api_deployment_name: str
     emb_api_trust_remote_code: Optional[bool]
     cost_prompt_token_cost: float
     cost_response_token_cost: float
@@ -56,6 +60,8 @@ class APIEmbeddingModelConfiguration(EmbeddingModelConfiguration):
         additional_properties = [
             ['emb_api.api_base', '', str],
             ['emb_api.api_token', '', str],
+            ['emb_api.api_version', '', str],
+            ['emb_api.deployment_name', '', str],
             ['emb_api.trust_remote_code', False, bool],
             ['cost.prompt_token_cost', 0.0, float],
             ['cost.response_token_cost', 0.0, float],
