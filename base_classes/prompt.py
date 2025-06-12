@@ -133,5 +133,5 @@ class AbstractPrompt(HasLoggerClass):
         """
         super().__init__()
         self.prompt = prompt
-        self.logger.debug(f"Prompt initialized with {len(self.prompt)} messages.")
+        # self.logger.debug(f"Prompt initialized with {len(self.prompt)} messages.")
         
