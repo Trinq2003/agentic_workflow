@@ -1,4 +1,5 @@
 import spacy
+import re
 from typing import List, Tuple, Dict, Any
 
 from base_classes.nlp import AbstractNLPModel
@@ -62,3 +63,118 @@ class SpacyNLP(AbstractNLPModel):
         """Analyze the lexical elements of the text."""
         doc = self.nlp(text)
         return {"lexicon": {token.text: token.lemma_ for token in doc}}
+
+    def extract_nouns(self, text: str) -> List[str]:
+        """
+        Extract nouns from text using POS tagging, excluding pronouns.
+        
+        Args:
+            text (str): The text to extract nouns from.
+            
+        Returns:
+            List[str]: A list of extracted nouns.
+        """
+        pos_tags = self.pos_tagging(text)
+        nouns = []
+        
+        for token, pos in pos_tags:
+            # spaCy POS tags: NOUN = noun, PROPN = proper noun, PRON = pronoun
+            if pos in ['NOUN', 'PROPN']:
+                # Convert to lowercase and clean the token
+                clean_token = token.strip().lower()
+                # Filter out very short tokens and common pronouns that might slip through
+                if len(clean_token) > 2 and clean_token not in ['i', 'he', 'she', 'it', 'we', 'they', 'me', 'him', 'her', 'us', 'them']:
+                    # Normalize plural forms to singular
+                    normalized_token = self.normalize_plural(clean_token)
+                    nouns.append(normalized_token)
+        
+        return nouns
+
+    def extract_uuids(self, text: str) -> List[str]:
+        """
+        Extract UUIDs from text using regex pattern matching.
+        
+        Args:
+            text (str): The text to extract UUIDs from.
+            
+        Returns:
+            List[str]: A list of extracted UUIDs.
+        """
+        uuid_pattern = r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+        return re.findall(uuid_pattern, text.lower())
+
+    def extract_function_names(self, text: str) -> List[str]:
+        """
+        Extract Python function names from text using regex pattern matching.
+        
+        Args:
+            text (str): The text to extract function names from.
+            
+        Returns:
+            List[str]: A list of extracted function names.
+        """
+        function_pattern = r'(\w+)\s*\('
+        function_names = re.findall(function_pattern, text)
+        
+        # Clean and filter function names
+        clean_functions = []
+        for func_name in function_names:
+            clean_func = func_name.strip().lower()
+            if len(clean_func) > 2:
+                clean_functions.append(clean_func)
+        
+        return clean_functions
+
+    def normalize_plural(self, word: str) -> str:
+        """
+        Normalize plural forms to singular using spaCy lemmatization.
+        
+        Args:
+            word (str): The word to normalize.
+            
+        Returns:
+            str: The normalized (singular) form of the word.
+        """
+        # Use spaCy's lemmatization for better accuracy
+        doc = self.nlp(word)
+        if doc:
+            return doc[0].lemma_.lower()
+        
+        # Fallback to simple rules if spaCy lemmatization fails
+        if word.endswith('ies'):
+            return word[:-3] + 'y'
+        elif word.endswith('s'):
+            return word[:-1]
+        else:
+            return word
+
+    def extract_keywords(self, text: str) -> List[str]:
+        """
+        Extract comprehensive keywords from text including nouns, UUIDs, and function names.
+        
+        Args:
+            text (str): The text to extract keywords from.
+            
+        Returns:
+            List[str]: A list of extracted keywords.
+        """
+        # Extract different types of keywords
+        uuids = self.extract_uuids(text)
+        function_names = self.extract_function_names(text)
+        nouns = self.extract_nouns(text)
+        
+        # Combine all extracted keywords
+        all_keywords = []
+        all_keywords.extend(uuids)
+        all_keywords.extend(function_names)
+        all_keywords.extend(nouns)
+        
+        # Remove duplicates while preserving order
+        unique_keywords = []
+        seen = set()
+        for keyword in all_keywords:
+            if keyword not in seen:
+                unique_keywords.append(keyword)
+                seen.add(keyword)
+        
+        return unique_keywords

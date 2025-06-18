@@ -41,57 +41,89 @@ class AbstractNLPModel(SystemComponent):
     def get_emb_instance_by_id(cls, nlp_id: str) -> Self:
         return cls._nlp_model_by_id.get(nlp_id, None)
     
+    @property
+    def nlp_model_id(self) -> str:
+        """
+        Get the NLP model ID.
+        """
+        return self._nlp_model_id
+    
     @abstractmethod
-    def tokenize(self):
+    def tokenize(self, text: str) -> List[str]:
         """Tokenize the input text into words or sentences."""
         pass
 
     @abstractmethod
-    def remove_stopwords(self):
+    def remove_stopwords(self, text: str) -> List[str]:
         """Remove stopwords from the tokenized text."""
         pass
 
     @abstractmethod
-    def stem(self):
+    def stem(self, text: str) -> List[str]:
         """Perform stemming on the tokenized text."""
         pass
 
     @abstractmethod
-    def lemmatize(self):
+    def lemmatize(self, text: str) -> List[str]:
         """Perform lemmatization on the tokenized text."""
         pass
 
     @abstractmethod
-    def vectorize(self):
+    def vectorize(self, text: str) -> List[float]:
         """Convert the processed text into numerical vectors."""
         pass
 
     @abstractmethod
-    def summarize(self):
+    def summarize(self, text: str) -> str:
         """Summarize the input text."""
         pass
 
     @abstractmethod
-    def pos_tagging(self):
+    def pos_tagging(self, text: str) -> List[Tuple[str, str]]:
         """Perform Part-of-Speech tagging on the tokenized text."""
         pass
 
     @abstractmethod
-    def word_segmentation(self):
+    def word_segmentation(self, text: str) -> List[str]:
         """Segment text into words, especially useful for languages without spaces."""
         pass
 
     @abstractmethod
-    def semantic_parsing(self):
+    def semantic_parsing(self, text: str) -> Dict[str, Any]:
         """Analyze the meaning of the text."""
         pass
 
     @abstractmethod
-    def syntactic_parsing(self):
+    def syntactic_parsing(self, text: str) -> Dict[str, Any]:
         """Parse the syntactic structure of the text."""
         pass
 
     @abstractmethod
-    def lexical_parsing(self):
+    def lexical_parsing(self, text: str) -> Dict[str, Any]:
         """Analyze the lexical elements of the text."""
+        pass
+
+    @abstractmethod
+    def extract_nouns(self, text: str) -> List[str]:
+        """Extract nouns from the text."""
+        pass
+
+    @abstractmethod
+    def extract_uuids(self, text: str) -> List[str]:
+        """Extract UUIDs from the text."""
+        pass
+    
+    @abstractmethod
+    def extract_function_names(self, text: str) -> List[str]:
+        """Extract function names from the text."""
+        pass
+
+    @abstractmethod
+    def normalize_plural(self, word: str) -> str:
+        """Normalize the plural form of a word."""
+        pass
+    
+    @abstractmethod
+    def extract_keywords(self, text: str) -> List[str]:
+        """Extract comprehensive keywords from the text."""
         pass
