@@ -13,8 +13,7 @@ class MemoryAtomType(IntEnum):
 
 class MemoryBlockState(IntEnum):
     EMPTY = 0 # Empty, no data in the memory block
-    RAW_INPUT_ONLY = 1 # Raw input only, the system hasn't finished processing it yet
-    RAW_INPUT_AND_OUTPUT = 2 # Raw input and output, the system processed the raw input and response raw data
-    REFINED_INPUT = 3 # Refined input, the system processed the raw input and response refined data
-    REFINED_INPUT_AND_OUTPUT = 4 # Refined input and output, the system processed the raw input and response refined data and outputed data
-    FEATURE_ENGINEERED = 5 # Extracted features, the system processed the input and outputed data, and the data is refined and features are extracted
+    RAW_INPUT_ONLY = 1 # Input only, the system hasn't finished processing it yet
+    REFINED_INPUT = 2 # Refined input, the system processed the raw input and response refined data
+    INPUT_AND_OUTPUT = 3 # Input and output, the system processed the input and response raw data
+    FEATURE_ENGINEERED = 4 # Extracted features, the system processed the input and outputed data, and the data is refined and features are extracted

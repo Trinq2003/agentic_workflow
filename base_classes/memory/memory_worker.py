@@ -10,7 +10,7 @@ from base_classes.llm import AbstractLanguageModel
 from base_classes.embedding import AbstractEmbeddingModel
 from base_classes.nlp import AbstractNLPModel
 from base_classes.memory.memory_block import AbstractMemoryBlock
-from base_classes.prompt import ICIOPrompt
+from base_classes.prompt import ICIOPrompt, AbstractPrompt
 from base_classes.memory.memory_topic import AbstractMemoryTopic
 from base_classes.memory.management_term import MemoryBlockState
 from base_classes.memory.memory_stack import AbstractMemoryStack
@@ -49,28 +49,28 @@ MULTITURN_OUTPUT_REFINEMENT_PROMPT = """
 You are an advanced AI system designed for multiturn conversational applications, tasked with refining the last output to ensure coherence with the conversational history. Your goal is to rewrite the most recent response to align seamlessly with prior exchanges, user intent, and context while improving accuracy, clarity, and relevance. Adhere to these guidelines for each refinement:
 
  1. **Conversational Coherence**: Ensure the rewritten output maintains a consistent tone, style, and context with the entire conversation history. Reference prior user inputs, clarifications, or preferences naturally to preserve continuity.
- 2. **Accuracy**: Verify that the rewritten output is factually correct and logically consistent, correcting any errors or inconsistencies from the last output while aligning with the conversation’s established facts or reasoning.
+ 2. **Accuracy**: Verify that the rewritten output is factually correct and logically consistent, correcting any errors or inconsistencies from the last output while aligning with the conversation's established facts or reasoning.
  3. **Clarity**: Rewrite the response using clear, concise language with a logical structure (e.g., paragraphs, lists, or headings) to enhance readability and ensure the user easily understands the refined content.
- 4. **Relevance**: Focus the rewritten output on the user’s intent as inferred from the conversational history. Remove irrelevant details and emphasize information that directly addresses the user’s needs or queries.
+ 4. **Relevance**: Focus the rewritten output on the user's intent as inferred from the conversational history. Remove irrelevant details and emphasize information that directly addresses the user's needs or queries.
  5. **Iterative Improvement**: Enhance the last output by incorporating user feedback, new context, or clarifications from the conversation history. Improve precision, depth, or specificity without altering the core intent unless explicitly required.
  6. **Contextual Integration**: Seamlessly weave in relevant details from prior turns, such as user preferences, specific questions, or recurring themes, to make the response feel like a natural continuation of the dialogue.
- 7. **Conciseness**: Streamline the rewritten output to eliminate redundancy or verbosity while retaining all necessary details to fully address the user’s query.
- 8. **User-Centric Adaptation**: Adjust the tone, detail level, or format (e.g., explanatory, instructional, or technical) based on the user’s evolving needs as reflected in the conversation history.
- 9. **Proactive Alignment**: If the last output was misaligned with the user’s intent or context, rewrite it to correct the course, and include a subtle acknowledgment of the refinement (e.g., “To better address your question…”). If clarification is needed, pose a concise follow-up question.
+ 7. **Conciseness**: Streamline the rewritten output to eliminate redundancy or verbosity while retaining all necessary details to fully address the user's query.
+ 8. **User-Centric Adaptation**: Adjust the tone, detail level, or format (e.g., explanatory, instructional, or technical) based on the user's evolving needs as reflected in the conversation history.
+ 9. **Proactive Alignment**: If the last output was misaligned with the user's intent or context, rewrite it to correct the course, and include a subtle acknowledgment of the refinement (e.g., "To better address your question…"). If clarification is needed, pose a concise follow-up question.
 10. **Ethical Integrity**: Ensure the rewritten output is neutral, unbiased, and respects user privacy. If the last output contained errors or limitations, address them transparently while offering a constructive alternative.
 
 For each task:
 
 - Receive the full conversational history and the last output.
-- Analyze the history to understand the user’s intent, preferences, and any feedback or clarifications provided across turns.
-- Identify misalignments, inaccuracies, or areas for improvement in the last output based on the conversation’s context.
+- Analyze the history to understand the user's intent, preferences, and any feedback or clarifications provided across turns.
+- Identify misalignments, inaccuracies, or areas for improvement in the last output based on the conversation's context.
 - Rewrite the last output to align with the history, enhancing clarity, coherence, and relevance while preserving or refining the original intent.
 - Structure the response for maximum readability, using formatting as needed (e.g., bullet points for lists, headings for sections).
-- If appropriate, include a brief prompt for further input (e.g., “Does this address your question, or would you like further details?”) to sustain the conversation.
+- If appropriate, include a brief prompt for further input (e.g., "Does this address your question, or would you like further details?") to sustain the conversation.
 
-Example Multiturn Flow: Conversation History: User (Turn 1): “Explain how AI is used in healthcare.” AI (Turn 1): “AI in healthcare improves diagnostics, treatment planning, and patient monitoring. Machine learning analyzes medical images, like X-rays, to detect diseases early. Predictive models forecast patient outcomes, and chatbots assist with triage. Would you like to focus on a specific application?” User (Turn 2): “Focus on diagnostics, especially for cancer.” AI (Last Output, Turn 2): “AI diagnostics use machine learning to analyze data. In cancer, AI processes images to detect tumors. It also predicts disease progression.”
+Example Multiturn Flow: Conversation History: User (Turn 1): "Explain how AI is used in healthcare." AI (Turn 1): "AI in healthcare improves diagnostics, treatment planning, and patient monitoring. Machine learning analyzes medical images, like X-rays, to detect diseases early. Predictive models forecast patient outcomes, and chatbots assist with triage. Would you like to focus on a specific application?" User (Turn 2): "Focus on diagnostics, especially for cancer." AI (Last Output, Turn 2): "AI diagnostics use machine learning to analyze data. In cancer, AI processes images to detect tumors. It also predicts disease progression."
 
-Refined Output: AI (Rewritten): “In cancer diagnostics, AI leverages machine learning to enhance accuracy and early detection. For example, deep learning models analyze medical images, such as mammograms or CT scans, to identify tumors with high precision, often outperforming traditional methods. AI also integrates patient data to assess cancer risk or stage, supporting oncologists in tailoring treatments. This aligns with your interest in diagnostics from our earlier discussion. Would you like details on a specific cancer type or AI technique used in this process?”
+Refined Output: AI (Rewritten): "In cancer diagnostics, AI leverages machine learning to enhance accuracy and early detection. For example, deep learning models analyze medical images, such as mammograms or CT scans, to identify tumors with high precision, often outperforming traditional methods. AI also integrates patient data to assess cancer risk or stage, supporting oncologists in tailoring treatments. This aligns with your interest in diagnostics from our earlier discussion. Would you like details on a specific cancer type or AI technique used in this process?"
 
 Your rewritten output should ensure the conversation feels fluid and responsive, refining the last response to be a coherent, accurate, and valuable continuation of the multiturn dialogue.
 """
@@ -91,7 +91,7 @@ class MemoryWorker(HasLoggerClass):
         }   
     }
     
-    def __init__(self, llm: AbstractLanguageModel, emb_model: AbstractEmbeddingModel, nlp: AbstractNLPModel) -> None:
+    def __init__(self, llm: AbstractLanguageModel, emb_model: AbstractEmbeddingModel, nlp_model: AbstractNLPModel) -> None:
         """
         Initialize the Memory Language Model instance with configuration, model details, and caching options.
 
@@ -101,9 +101,9 @@ class MemoryWorker(HasLoggerClass):
         super().__init__()
         self._llm = llm
         self._emb_model = emb_model
-        self._nlp = nlp
+        self._nlp = nlp_model
         
-        self.logger.debug(f"Memory Worker initialized with LLM: {self._llm}, Embedding Model: {self._emb_model}, NLP Model: {self._nlp}.")
+        self.logger.debug(f"Memory Worker initialized with LLM: {self._llm.llm_id}, Embedding Model: {self._emb_model.emb_id}, NLP Model: {self._nlp.nlp_model_id}.")
     
     # Memory block context refinement methods
     def refine_input_query(self, mem_block: AbstractMemoryBlock) -> None:
@@ -123,47 +123,43 @@ class MemoryWorker(HasLoggerClass):
                 User: {mem_block.input_query}
                 Assistant: {mem_block.output_response}
                 """
-        _refine_prompt.context(context_str)
+        _refine_prompt.context = context_str
+        raw_input_refinement_prompt = AbstractPrompt([_refine_prompt.to_dict()])
+        raw_refined_input_response = self._llm.query(raw_input_refinement_prompt)
         
-        raw_refined_input_response = self._llm.query(str(_refine_prompt.instruction(MULTITURN_INPUT_REFINEMENT_PROMPT)))
-        mem_block.refined_input_query = self._llm.get_response_texts(raw_refined_input_response)[0]
-        raw_refined_output_response = self._llm.query(str(_refine_prompt.instruction(MULTITURN_OUTPUT_REFINEMENT_PROMPT)))
-        mem_block.refined_output_response = self._llm.get_response_texts(raw_refined_output_response)[0]
+        # Check if the response is None (query failed)
+        if raw_refined_input_response is None:
+            self.logger.warning(f"LLM query failed for input refinement of memory block {mem_block.mem_block_id}, using original input")
+            mem_block.refined_input_query = mem_block.input_query
+        else:
+            mem_block.refined_input_query = self._llm.get_response_texts(raw_refined_input_response)[0]
         
         mem_block.mem_block_state = MemoryBlockState.REFINED_INPUT_AND_OUTPUT
     
     # Memory block feature engineering methods
-    def _extract_keywords_for_memory_block(self, mem_block: AbstractMemoryBlock) -> List[str]:
+    def _extract_keywords_for_memory_block(self, mem_block: AbstractMemoryBlock) -> Dict[str, List[str]]:
         """
-        Extract important keywords from the input string using the LLM.
+        Extract important keywords (nouns) from the input string using NLP.
 
         Args:
             mem_block (AbstractMemoryBlock): The memory block containing the input string.
 
         Returns:
-            List[str]: A list of extracted keywords.
+            Dict[str, List[str]]: A dictionary with "raw" and "refined" keyword lists.
         """
-        _keyword_extraction_prompt = ICIOPrompt(
-            instruction="Extract the most important keywords from the following text and list them separated by commas.",
-            context="",
-            input_indicator="",
-            output_indicator="Go directly to the answer without any introduction. Output on one line of keywords, seperated by `,`.",
-            role="user",
-        )
+        # Combine input and output text for keyword extraction
+        combined_text = str(mem_block)
+
+        # Use NLP to extract nouns (excluding pronouns)
+        nouns = self._nlp.extract_nouns(combined_text)
         
-        keyword_dict = {}
-        # Extract keywords for refined context
-        _keyword_extraction_prompt.context(mem_block.refined_input_query + "\n" + mem_block.refined_output_response)
-        raw_response = self._llm.query(str(_keyword_extraction_prompt))
-        keywords = [keyword.strip().lower() for keyword in self._llm.get_response_texts(raw_response)[0].split(",")]
-        keyword_dict["refined"] = keywords
-        # Extract keywords for raw context
-        _keyword_extraction_prompt.context = mem_block.input_query + "\n" + mem_block.output_response
-        raw_response = self._llm.query(str(_keyword_extraction_prompt))
-        keywords = [keyword.strip().lower() for keyword in self._llm.get_response_texts(raw_response)[0].split(",")]
-        keyword_dict["raw"] = keywords
+        self.logger.debug(f"Keywords for Memblock {mem_block.mem_block_id}: {nouns}")
         
-        return keywords
+        # Return the expected dictionary structure
+        return {
+            "raw": nouns,
+            "refined": nouns
+        }
     
     def _generate_embedding_for_memory_block(self, mem_block: AbstractMemoryBlock) -> Dict:
         """
@@ -176,15 +172,19 @@ class MemoryWorker(HasLoggerClass):
             List[Tensor] | Tensor: The generated embedding vector.
         """
         # Use the embedding model's encode method (assumes it returns List[float])
+        refined_input_embedding = self._emb_model.encode(mem_block.refined_input_query)
+        raw_input_embedding = self._emb_model.encode(mem_block.input_query)
+        raw_output_embedding = self._emb_model.encode(mem_block.output_response)
+        context_embedding = self._emb_model.encode(str(mem_block))
+        self.logger.debug(f"Generated embeddings for Memblock {mem_block.mem_block_id}")
         return {
             'refined': {
-                'refined_input_embedding': self._emb_model.encode(mem_block.refined_input_query),
-                'refined_output_embedding': self._emb_model.encode(mem_block.refined_output_response)
+                'refined_input_embedding': refined_input_embedding,
             },
             'raw': {
-                'input_embedding': self._emb_model.encode(mem_block.input_query),
-                'output_embedding': self._emb_model.encode(mem_block.output_response),
-                'context_embedding': self._emb_model.encode(str(mem_block))
+                'input_embedding': raw_input_embedding,
+                'output_embedding': raw_output_embedding,
+                'context_embedding': context_embedding
             }
         }
     
@@ -198,11 +198,11 @@ class MemoryWorker(HasLoggerClass):
         Returns:
             None
         """
-        assert mem_block.mem_block_state == MemoryBlockState.REFINED_INPUT_AND_OUTPUT, "❌ Memory Block State should be REFINE."
+        assert mem_block.mem_block_state == MemoryBlockState.INPUT_AND_OUTPUT, "❌ Memory Block State should be INPUT_AND_OUTPUT."
         
-        container_topic_id = mem_block.topic_container_id
+        container_topic_ids = mem_block.topic_container_ids
         # Set the topic container ID for the memory block
-        mem_block.identifying_features["address_in_topic"] = AbstractMemoryTopic.get_memtopic_instance_by_id(container_topic_id).get_address_of_block_by_id(mem_block.mem_block_id)
+        # mem_block.identifying_features["address_in_topic"] = AbstractMemoryTopic.get_memtopic_instance_by_id(container_topic_id).get_address_of_block_by_id(mem_block.mem_block_id)
         
         keywords: Dict = self._extract_keywords_for_memory_block(mem_block)
         embedding_vector: Dict = self._generate_embedding_for_memory_block(mem_block)
@@ -216,7 +216,6 @@ class MemoryWorker(HasLoggerClass):
         mem_block.identifying_features["feature_for_raw_context"]["input_embedding"] = embedding_vector["raw"]["input_embedding"]
         mem_block.identifying_features["feature_for_raw_context"]["output_embedding"] = embedding_vector["raw"]["output_embedding"]
         mem_block.identifying_features["feature_for_refined_context"]["refined_input_embedding"] = embedding_vector["refined"]["refined_input_embedding"]
-        mem_block.identifying_features["feature_for_refined_context"]["refined_output_embedding"] = embedding_vector["refined"]["refined_output_embedding"]
         
         mem_block.mem_block_state = MemoryBlockState.FEATURE_ENGINEERED
     
@@ -257,8 +256,6 @@ class MemoryWorker(HasLoggerClass):
             raw_output_emb_similarity = self._emb_model.similarity(input_query, raw_output_emb)
             refined_input_emb = mem_block.identifying_features["feature_for_refined_context"]["refined_input_embedding"]
             refined_input_emb_similarity = self._retrieval_semantic_similarity_score(input_query_emb, refined_input_emb)
-            refined_output_emb = mem_block.identifying_features["feature_for_refined_context"]["refined_output_embedding"]
-            refined_output_emb_similarity = self._retrieval_semantic_similarity_score(input_query_emb, refined_output_emb)
             
             semantic_similarity_score = self._retrieval_semantic_similarity_score(raw_input_emb_similarity, raw_output_emb_similarity, refined_input_emb_similarity, refined_output_emb_similarity)
             # Calculate the overall retrieval score

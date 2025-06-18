@@ -37,8 +37,8 @@ class AbstractMemoryTopic(TimeTraceableItem, HasLoggerClass):
     
     def insert_mem_block(self, mem_block: AbstractMemoryBlock) -> None:
         self._chain_of_memblocks.append(mem_block)
-        mem_block.topic_container_id = self._mem_topic_id
-        self.logger.debug(f"Inserted Memory Block ID {mem_block.mem_block_id} into Memory Topic {self._mem_topic_id}. New MemBlock's topic conatiner ID: {mem_block.topic_container_id}.")
+        mem_block.topic_container_ids.append(self._mem_topic_id)
+        self.logger.debug(f"Inserted Memory Block ID {mem_block.mem_block_id} into Memory Topic {self._mem_topic_id}. New MemBlock's topic conatiner ID: {mem_block.topic_container_ids}.")
     def get_address_of_block_by_id(self, mem_block_id: uuid.UUID) -> int:
         for index, mem_block in enumerate(self._chain_of_memblocks):
             if mem_block.mem_block_id == mem_block_id:

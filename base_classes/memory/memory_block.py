@@ -21,15 +21,14 @@ class AbstractMemoryBlock(TimeTraceableItem, HasLoggerClass):
     _mem_block_id: uuid.UUID
     _memory_atoms: List[AbstractMemoryAtom] = []
     _mem_atom_graph: Dict[uuid.UUID, List[uuid.UUID]] = {} # Graph of memory atoms and their dependencies
-    identifying_features: MemoryBlockFeature = {}
-    
+    identifying_features: MemoryBlockFeature
     _input_query: str = "" # Input query from the user or system
     _output_response: str = "" # Output response from the system or assistant
     _refined_input_query: str = "" # Refined input query after processing
-    _refined_output_response: str = "" # Refined output response after processing
+    # _refined_output_response: str = "" # Refined output response after processing
     _mem_block_state: MemoryBlockState
     _access_count: int = 0 # Access count for the memory block    
-    _topic_container_id: uuid.UUID = None
+    _topic_container_ids: List[uuid.UUID] = []
     
     _memblock_instances_by_id: Dict[uuid.UUID, Self] = {}
     def __init__(self):
@@ -38,6 +37,20 @@ class AbstractMemoryBlock(TimeTraceableItem, HasLoggerClass):
         self._mem_block_id: uuid.UUID = uuid.uuid4()
         self._memory_atoms: List[AbstractMemoryAtom] = []
         self._mem_block_state: MemoryBlockState = MemoryBlockState.EMPTY
+        
+        # Initialize identifying_features with the proper structure
+        self.identifying_features: MemoryBlockFeature = {
+            "feature_for_raw_context": {
+                "keywords": [],
+                "input_embedding": None,
+                "output_embedding": None,
+                "context_embedding": None
+            },
+            "feature_for_refined_context": {
+                "keywords": [],
+                "refined_input_embedding": None
+            }
+        }
         
         if self._mem_block_id in self.__class__._memblock_instances_by_id.keys():
             self.logger.error(f"Memory Block ID {self._mem_block_id} is already initiated.")
@@ -218,8 +231,8 @@ class AbstractMemoryBlock(TimeTraceableItem, HasLoggerClass):
     @output_response.setter
     def output_response(self, response: str) -> None:
         self._access_count += 1
-        if self.mem_block_state < MemoryBlockState.RAW_INPUT_AND_OUTPUT:
-            self.mem_block_state = MemoryBlockState.RAW_INPUT_AND_OUTPUT
+        if self.mem_block_state < MemoryBlockState.INPUT_AND_OUTPUT:
+            self.mem_block_state = MemoryBlockState.INPUT_AND_OUTPUT
         self._output_response = response
     @property
     def refined_input_query(self) -> str:
@@ -231,22 +244,22 @@ class AbstractMemoryBlock(TimeTraceableItem, HasLoggerClass):
         if self.mem_block_state < MemoryBlockState.REFINED_INPUT:
             self.mem_block_state = MemoryBlockState.REFINED_INPUT
         self._refined_input_query = query
+    # @property
+    # def refined_output_response(self) -> str:
+    #     self._access_count += 1
+    #     return self._refined_output_response
+    # @refined_output_response.setter
+    # def refined_output_response(self, response: str) -> None:
+    #     self._access_count += 1
+    #     if self.mem_block_state < MemoryBlockState.REFINED_INPUT_AND_OUTPUT:
+    #         self.mem_block_state = MemoryBlockState.REFINED_INPUT_AND_OUTPUT
+    #     self._refined_output_response = response
     @property
-    def refined_output_response(self) -> str:
-        self._access_count += 1
-        return self._refined_output_response
-    @refined_output_response.setter
-    def refined_output_response(self, response: str) -> None:
-        self._access_count += 1
-        if self.mem_block_state < MemoryBlockState.REFINED_INPUT_AND_OUTPUT:
-            self.mem_block_state = MemoryBlockState.REFINED_INPUT_AND_OUTPUT
-        self._refined_output_response = response
-    @property
-    def topic_container_id(self) -> uuid.UUID:
-        return self._topic_container_id
-    @topic_container_id.setter
-    def topic_container_id(self, topic_container_id: uuid.UUID) -> None:
-        self._topic_container_id = topic_container_id
+    def topic_container_ids(self) -> List[uuid.UUID]:
+        return self._topic_container_ids
+    @topic_container_ids.setter
+    def topic_container_ids(self, topic_container_ids: List[uuid.UUID]) -> None:
+        self._topic_container_ids = topic_container_ids
     @property
     def mem_block_state(self) -> MemoryBlockState:
         return self._mem_block_state
@@ -271,6 +284,18 @@ class AbstractMemoryBlock(TimeTraceableItem, HasLoggerClass):
                 self._mem_atom_graph[memory_atom.mem_atom_id].append(requiring_atom_id)
                 
         self._sync_dependencies()
+        
+        # Extract input query from the first memory atom's prompt
+        if len(self._memory_atoms) == 1:  # This is the first memory atom
+            prompts = memory_atom.data.content.prompt
+            for prompt in prompts:
+                if prompt.get('role') == 'user':
+                    # Extract the content from the user prompt
+                    user_content = prompt.get('content', '')
+                    if user_content:
+                        self.input_query = user_content
+                    break
+        
         prompts = memory_atom.data.content.prompt
         roles = set()
         for prompt in prompts:
@@ -280,8 +305,8 @@ class AbstractMemoryBlock(TimeTraceableItem, HasLoggerClass):
             if self.mem_block_state < MemoryBlockState.RAW_INPUT_ONLY:
                 self.mem_block_state = MemoryBlockState.RAW_INPUT_ONLY
         if "assistant" in roles:
-            if self.mem_block_state < MemoryBlockState.RAW_INPUT_AND_OUTPUT:
-                self.mem_block_state = MemoryBlockState.RAW_INPUT_AND_OUTPUT
+            if self.mem_block_state < MemoryBlockState.INPUT_AND_OUTPUT:
+                self.mem_block_state = MemoryBlockState.INPUT_AND_OUTPUT
         
         self.logger.debug(f"Added memory atom {memory_atom.mem_atom_id} to memory block {self._mem_block_id}.")
     
@@ -335,17 +360,3 @@ class AbstractMemoryBlock(TimeTraceableItem, HasLoggerClass):
     
     def __len__(self) -> int:
         return len(self._memory_atoms)
-    
-class RealMemoryBlock(AbstractMemoryBlock):
-    """
-    The RealMemoryBlock class is a concrete implementation of the AbstractMemoryBlock class.
-    It serves as a real storage for conversation between user and system.
-    """
-    pass
-
-class SyntheticMemoryBlock(AbstractMemoryBlock):
-    """
-    The SyntheticMemoryBlock class is a concrete implementation of the AbstractMemoryBlock class.
-    It serves as a refined storage based on the content of ReaslMemoryBlock (only keep the related content to the memory topic).
-    """
-    pass

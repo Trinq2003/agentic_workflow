@@ -41,6 +41,11 @@ class PromptDataItem(AbstractDataItem):
         for index, message in enumerate(prompt):
             role = message['role']
             content = message['content']
+            
+            # Handle case where content might be a dictionary or other non-string type
+            if not isinstance(content, str):
+                content = str(content)
+            
             if role == "system": prefix = f"Message {index + 1}. System message: \n\t"
             if role == "user": prefix = f"Message {index + 1}. User message: \n\t"
             if role == "developer": prefix = f"Message {index + 1}. Developer message: \n\t"
