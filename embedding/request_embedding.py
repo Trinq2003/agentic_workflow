@@ -2,9 +2,9 @@ from typing import List
 import torch
 import requests
 import time
-from langchain.embeddings import HuggingFaceEmbeddings, OpenAIEmbeddings, CohereEmbeddings
+from langchain_openai import OpenAIEmbeddings, AzureOpenAIEmbeddings
+from langchain.embeddings import HuggingFaceEmbeddings, CohereEmbeddings
 from langchain.embeddings.base import Embeddings
-from langchain_community.embeddings import AzureOpenAIEmbeddings
 from langchain_community.embeddings import XinferenceEmbeddings
 
 from base_classes.embedding import AbstractEmbeddingModel
@@ -43,10 +43,12 @@ class RequestEmbeddingModel(AbstractEmbeddingModel):
         
         if self._config.model_provider == "azure":
             self._emb_model = AzureOpenAIEmbeddings(
-                azure_deployment=self.__emb_api_deployment_name,
                 openai_api_version=self.__emb_api_api_version,
-                azure_endpoint=self.__emb_api_api_base,
-                api_key=self.__emb_api_api_token
+                openai_api_type="azure",
+                api_key=self.__emb_api_api_token,
+                azure_endpoint=self.__emb_api_api_base.rstrip("/"),
+                azure_deployment=self.__emb_api_deployment_name,
+                model=self._model_name
             )
         elif self._config.model_provider == "openai":
             self._emb_model = OpenAIEmbeddings(

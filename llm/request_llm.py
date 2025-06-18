@@ -14,6 +14,7 @@ from langchain.callbacks.manager import CallbackManager
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 
 from base_classes.llm import AbstractLanguageModel
+from base_classes.prompt import AbstractPrompt
 
 class RequestLLM(AbstractLanguageModel):
     """
@@ -118,12 +119,12 @@ class RequestLLM(AbstractLanguageModel):
             self.logger.error(f"❌ Error loading model: {str(e)}")
             raise
 
-    def _query(self, query: Iterable[ChatCompletionMessageParam], num_responses: int = 1, stop: List[str] = None) -> ChatCompletion:
+    def _query(self, query: AbstractPrompt, num_responses: int = 1, stop: List[str] = None) -> ChatCompletion:
         """
-        Query the language model using message-based input format.
+        Query the language model using AbstractPrompt input format.
 
         :param query: The query to be posed to the language model.
-        :type query: Iterable[ChatCompletionMessageParam]
+        :type query: AbstractPrompt
         :param num_responses: The number of desired responses.
         :type num_responses: int
         :param stop: List of stop sequences.
@@ -132,9 +133,12 @@ class RequestLLM(AbstractLanguageModel):
         :rtype: ChatCompletion
         """
         try:
+            # Extract the prompt messages from AbstractPrompt
+            prompt_messages = query.prompt
+            
             # Convert OpenAI message format to LangChain message format
             messages = []
-            for msg in query:
+            for msg in prompt_messages:
                 if msg["role"] == "system":
                     messages.append(SystemMessage(content=msg["content"]))
                 elif msg["role"] == "user":

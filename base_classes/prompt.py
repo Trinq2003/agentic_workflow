@@ -4,15 +4,14 @@ from typing import List, Dict, Any, Optional, Required, Union, Literal, TypedDic
 
 from base_classes.logger import HasLoggerClass
 
-class ICIOPrompt(TypedDict, total=False):
+class ICIOPrompt:
     """A class representing a single prompt message with ICIO components."""
-    content: Required[str]
-    role: Required[Literal["user", "developer", "assistant", "system", "tool"]]
     
     _instruction: str
     _context: str
     _input_indicator: str
     _output_indicator: str
+    _role: str
     def __init__(
         self,
         instruction: str="",
@@ -31,28 +30,16 @@ class ICIOPrompt(TypedDict, total=False):
         :param role: The role of the message (e.g., "user", "system", "assistant")
         :param kwargs: Additional arguments for ChatCompletionMessageParam
         """
-        # Construct the content using ICIO components
-        content = ""
-        if instruction:
-            content += f"<instruction>\n{instruction}\n</instruction>\n\n"
-        if context:
-            content += f"<context>\n{context}\n</context>\n\n"
-        if input_indicator:
-            content += f"<input_indicator>\n{input_indicator}\n</input_indicator>\n\n"
-        if output_indicator:
-            content += f"<output_indicator>\n{output_indicator}\n</output_indicator>"
-        
-        # Initialize the parent ChatCompletionMessageParam
-        self.content = content.strip()
-        self.role = role
         
         # Store ICIO components as private attributes
         self._instruction = instruction
         self._context = context
         self._input_indicator = input_indicator
         self._output_indicator = output_indicator
+        self._role = role
         
-        
+        # Construct the content using ICIO components
+        self._update_content()
 
     # Getters
     @property
@@ -70,6 +57,14 @@ class ICIOPrompt(TypedDict, total=False):
     @property
     def output_indicator(self) -> str:
         return self._output_indicator
+        
+    @property
+    def role(self) -> str:
+        return self._role
+        
+    @property
+    def content(self) -> str:
+        return self._content
 
     # Setters
     @instruction.setter
@@ -104,20 +99,18 @@ class ICIOPrompt(TypedDict, total=False):
         if self._output_indicator:
             out_string_prompt += f"<output_indicator>\n{self._output_indicator}\n</output_indicator>"
             
-        self["content"] = out_string_prompt.strip()
+        self._content = out_string_prompt.strip()
                  
     def __str__(self) -> str:
         """Return a string representation of the ICIOPrompt."""
-        out_string_prompt = ""
-        if self._instruction:
-            out_string_prompt += f"<instruction>\n{self._instruction}\n</instruction>\n\n"
-        if self._context:
-            out_string_prompt += f"<context>\n{self._context}\n</context>\n\n"
-        if self._input_indicator:
-            out_string_prompt += f"<input_indicator>\n{self._input_indicator}\n</input_indicator>\n\n"
-        if self._output_indicator:
-            out_string_prompt += f"<output_indicator>\n{self._output_indicator}\n</output_indicator>"
-        return out_string_prompt.strip()
+        return self._content
+        
+    def to_dict(self) -> Dict[str, str]:
+        """Convert to a dictionary format compatible with ChatCompletionMessageParam."""
+        return {
+            "content": self._content,
+            "role": self._role
+        }
 
 
 class AbstractPrompt(HasLoggerClass):

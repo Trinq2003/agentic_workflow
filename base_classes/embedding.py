@@ -64,6 +64,13 @@ class AbstractEmbeddingModel(SystemComponent):
         return cls._emb_instances_by_id.get(emb_id, None)
 
     @property
+    def emb_id(self) -> str:
+        """
+        Get the embedding model ID.
+        """
+        return self._emb_id
+
+    @property
     def identical_threshold(self) -> float:
         """
         Get the identical threshold for similarity.
