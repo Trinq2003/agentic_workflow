@@ -1,5 +1,6 @@
 import uuid
 from typing import Dict, List, Self, Any
+import textwrap
 
 from base_classes.memory.memory_atom import AbstractMemoryAtom
 from base_classes.memory.memory_features import MemoryBlockFeature
@@ -323,10 +324,10 @@ class AbstractMemoryBlock(TimeTraceableItem, HasLoggerClass):
         memory_block_str = []
         for memory_atom in self._memory_atoms:
             memory_atom_str = str(memory_atom)
-            memory_block_str.append(memory_atom_str)
+            memory_block_str.append(textwrap.indent(memory_atom_str, "\t"))
             
-        prefix = f"Memory Block ID: {str(self._mem_block_id)}. This represents a chain of conversations or actions.\n"
-        content = "The content of this memory block is as follows:\n\t" + '\n\t'.join(memory_block_str)
+        prefix = f"MemoryBlock {self._mem_block_id}:\n"
+        content = '\n'.join(memory_block_str)
         suffix = ""
         
         return prefix + content + suffix

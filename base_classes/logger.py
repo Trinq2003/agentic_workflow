@@ -43,5 +43,5 @@ class HasLoggerClass(ABC):
     logger: CustomLogger
 
     def __init__(self):
-        self.logger = CustomLogger(self.__class__.__name__, self.__class__.__name__)
+        self.logger = CustomLogger("Orbit." + self.__class__.__name__, self.__class__.__name__)
         self.logger.logger.propagate = True

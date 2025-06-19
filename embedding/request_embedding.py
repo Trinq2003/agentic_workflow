@@ -23,7 +23,7 @@ class RequestEmbeddingModel(AbstractEmbeddingModel):
         super().__init__(embedding_model_config)
 
         # Configuration parameters
-        self.logger.debug(f"List of APIEmbeddingModelConfiguration: {embedding_model_config.__dict__}")
+        # self.logger.debug(f"List of APIEmbeddingModelConfiguration: {embedding_model_config.__dict__}")
         self.__emb_api_api_base: str = self._config.emb_api_api_base
         self.__emb_api_api_token: str = self._config.emb_api_api_token
         self.__emb_api_api_version: str = self._config.emb_api_api_version
@@ -86,7 +86,7 @@ class RequestEmbeddingModel(AbstractEmbeddingModel):
         for attempt in range(self.__retry_max_retries):
             try:
                 embedding = self._emb_model.embed_query(text)
-                self.logger.debug(f"✅ Embedding generated for text '{text}'")
+                # self.logger.debug(f"✅ Embedding generated for text '{text}'")
                 return embedding
             except Exception as err:
                 self.logger.warning(f"[❌ {self.__class__.__name__}] Error occurred: {err}. Retrying {attempt + 1}/{self.__retry_max_retries}...")

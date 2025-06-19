@@ -119,7 +119,7 @@ class SpacyNLP(AbstractNLPModel):
         # Clean and filter function names
         clean_functions = []
         for func_name in function_names:
-            clean_func = func_name.strip().lower()
+            clean_func = func_name.strip().lower() + "()"
             if len(clean_func) > 2:
                 clean_functions.append(clean_func)
         
@@ -158,16 +158,33 @@ class SpacyNLP(AbstractNLPModel):
         Returns:
             List[str]: A list of extracted keywords.
         """
-        # Extract different types of keywords
+        # Extract full UUIDs
         uuids = self.extract_uuids(text)
-        function_names = self.extract_function_names(text)
-        nouns = self.extract_nouns(text)
+        uuid_set = set(uuids)
+        uuid_sub_tokens = set()
+        for uuid_str in uuids:
+            parts = uuid_str.split('-')
+            for part in parts:
+                if len(part) > 0:
+                    uuid_sub_tokens.add(part)
+        
+        # Mask all UUIDs in the text before extracting nouns
+        masked_text = text
+        for uuid_str in uuids:
+            masked_text = masked_text.replace(uuid_str, ' ')
+        
+        function_names = self.extract_function_names(masked_text)
+        nouns = self.extract_nouns(masked_text)
+        
+        # Filter out any function name or noun that is a full UUID or a UUID sub-token
+        filtered_function_names = [fn for fn in function_names if fn not in uuid_set and fn not in uuid_sub_tokens]
+        filtered_nouns = [noun for noun in nouns if noun not in uuid_set and noun not in uuid_sub_tokens]
         
         # Combine all extracted keywords
         all_keywords = []
-        all_keywords.extend(uuids)
-        all_keywords.extend(function_names)
-        all_keywords.extend(nouns)
+        all_keywords.extend(uuids)  # Only full UUIDs
+        all_keywords.extend(filtered_function_names)
+        all_keywords.extend(filtered_nouns)
         
         # Remove duplicates while preserving order
         unique_keywords = []

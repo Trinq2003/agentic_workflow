@@ -1,5 +1,6 @@
 import uuid
 from typing import List, Dict, Any, Self
+import textwrap
 
 from base_classes.memory.management_term import MemoryState, MemoryAtomType
 from base_classes.traceable_item import TimeTraceableItem
@@ -100,11 +101,9 @@ class AbstractMemoryAtom(TimeTraceableItem, HasLoggerClass):
         
     def __str__(self):
         # TODO: Change the wording method
-        data_str = str(self._data)
-        requiring_id_str = str([str(requiring_id) for requiring_id in self._requiring_atom])
-        required_id_str = str([str(required_id) for required_id in self._required_atom])
-        
-        prefix = f"At {self._last_accessed}, the following message (ID: {self._mem_atom_id}) was created. The content of message is given below: \n"
-        suffix = f"\nThis message is a response to messages {requiring_id_str} and also leads to messages {required_id_str}.\n"
+        data_str = textwrap.indent(str(self._data),"\t")
+
+        prefix = f"MemoryAtom {self._mem_atom_id}:\n"
+        suffix = ""
         
         return prefix + data_str + suffix

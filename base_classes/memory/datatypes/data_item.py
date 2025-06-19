@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, Union
 from datetime import datetime
+import textwrap
 
 from base_classes.prompt import AbstractPrompt
 from base_classes.system_component import SystemComponent
@@ -46,11 +47,11 @@ class PromptDataItem(AbstractDataItem):
             if not isinstance(content, str):
                 content = str(content)
             
-            if role == "system": prefix = f"Message {index + 1}. System message: \n\t"
-            if role == "user": prefix = f"Message {index + 1}. User message: \n\t"
-            if role == "developer": prefix = f"Message {index + 1}. Developer message: \n\t"
-            if role == "assistant": prefix = f"Message {index+1}. Assistant response: \n\t"
-            if role == "tool": prefix = f"Message {index+1}. Tool execution result: \n\t"
-            formatted_messages.append(prefix + content)
+            if role == "system": prefix = f"System message: \n"
+            if role == "user": prefix = f"User message: \n"
+            if role == "developer": prefix = f"Developer message: \n"
+            if role == "assistant": prefix = f"Assistant response: \n"
+            if role == "tool": prefix = f"Tool execution result: \n"
+            formatted_messages.append(prefix + textwrap.indent(content, "\t"))
         
         return "\n".join(formatted_messages)

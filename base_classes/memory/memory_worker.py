@@ -151,7 +151,7 @@ class MemoryWorker(HasLoggerClass):
         combined_text = str(mem_block)
 
         # Use NLP to extract nouns (excluding pronouns)
-        nouns = self._nlp.extract_nouns(combined_text)
+        nouns = self._nlp.extract_keywords(combined_text)
         
         self.logger.debug(f"Keywords for Memblock {mem_block.mem_block_id}: {nouns}")
         
