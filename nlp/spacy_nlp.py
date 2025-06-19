@@ -90,7 +90,7 @@ class SpacyNLP(AbstractNLPModel):
         
         return nouns
 
-    def extract_uuids(self, text: str) -> List[str]:
+    def _extract_uuids(self, text: str) -> List[str]:
         """
         Extract UUIDs from text using regex pattern matching.
         
@@ -103,7 +103,7 @@ class SpacyNLP(AbstractNLPModel):
         uuid_pattern = r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
         return re.findall(uuid_pattern, text.lower())
 
-    def extract_function_names(self, text: str) -> List[str]:
+    def _extract_function_names(self, text: str) -> List[str]:
         """
         Extract Python function names from text using regex pattern matching.
         
@@ -159,7 +159,7 @@ class SpacyNLP(AbstractNLPModel):
             List[str]: A list of extracted keywords.
         """
         # Extract full UUIDs
-        uuids = self.extract_uuids(text)
+        uuids = self._extract_uuids(text)
         uuid_set = set(uuids)
         uuid_sub_tokens = set()
         for uuid_str in uuids:
@@ -171,9 +171,9 @@ class SpacyNLP(AbstractNLPModel):
         # Mask all UUIDs in the text before extracting nouns
         masked_text = text
         for uuid_str in uuids:
-            masked_text = masked_text.replace(uuid_str, ' ')
+            masked_text = masked_text.replace(uuid_str, '')
         
-        function_names = self.extract_function_names(masked_text)
+        function_names = self._extract_function_names(masked_text)
         nouns = self.extract_nouns(masked_text)
         
         # Filter out any function name or noun that is a full UUID or a UUID sub-token

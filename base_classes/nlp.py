@@ -109,12 +109,12 @@ class AbstractNLPModel(SystemComponent):
         pass
 
     @abstractmethod
-    def extract_uuids(self, text: str) -> List[str]:
+    def _extract_uuids(self, text: str) -> List[str]:
         """Extract UUIDs from the text."""
         pass
     
     @abstractmethod
-    def extract_function_names(self, text: str) -> List[str]:
+    def _extract_function_names(self, text: str) -> List[str]:
         """Extract function names from the text."""
         pass
 
