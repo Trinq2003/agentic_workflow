@@ -20,16 +20,16 @@ class AbstractMemoryBlock(TimeTraceableItem, HasLoggerClass):
     related data and interactions over time.
     """
     _mem_block_id: uuid.UUID
-    _memory_atoms: List[AbstractMemoryAtom] = []
-    _mem_atom_graph: Dict[uuid.UUID, List[uuid.UUID]] = {} # Graph of memory atoms and their dependencies
+    _memory_atoms: List[AbstractMemoryAtom]
+    _mem_atom_graph: Dict[uuid.UUID, List[uuid.UUID]] # Graph of memory atoms and their dependencies
     identifying_features: MemoryBlockFeature
-    _input_query: str = "" # Input query from the user or system
-    _output_response: str = "" # Output response from the system or assistant
-    _refined_input_query: str = "" # Refined input query after processing
+    _input_query: str # Input query from the user or system
+    _output_response: str # Output response from the system or assistant
+    _refined_input_query: str # Refined input query after processing
     # _refined_output_response: str = "" # Refined output response after processing
     _mem_block_state: MemoryBlockState
-    _access_count: int = 0 # Access count for the memory block    
-    _topic_container_ids: List[uuid.UUID] = []
+    _access_count: int # Access count for the memory block    
+    _topic_container_ids: List[uuid.UUID]
     
     _memblock_instances_by_id: Dict[uuid.UUID, Self] = {}
     def __init__(self):
@@ -37,7 +37,13 @@ class AbstractMemoryBlock(TimeTraceableItem, HasLoggerClass):
         HasLoggerClass.__init__(self)
         self._mem_block_id: uuid.UUID = uuid.uuid4()
         self._memory_atoms: List[AbstractMemoryAtom] = []
+        self._mem_atom_graph: Dict[uuid.UUID, List[uuid.UUID]] = {}
+        self._input_query: str = ""
+        self._output_response: str = ""
+        self._refined_input_query: str = ""
         self._mem_block_state: MemoryBlockState = MemoryBlockState.EMPTY
+        self._access_count: int = 0
+        self._topic_container_ids: List[uuid.UUID] = []
         
         # Initialize identifying_features with the proper structure
         self.identifying_features: MemoryBlockFeature = {
@@ -270,6 +276,9 @@ class AbstractMemoryBlock(TimeTraceableItem, HasLoggerClass):
     @property
     def access_count(self) -> int:
         return self._access_count
+    @access_count.setter
+    def access_count(self, access_count: int) -> None:
+        self._access_count = access_count
     
     def add_memory_atom(self, memory_atom: AbstractMemoryAtom) -> None:
         self._add_one_node_without_dependencies(memory_atom)

@@ -2,7 +2,6 @@ from abc import abstractmethod
 from typing import List, Dict
 import torch
 from torch import Tensor
-import numpy as np
 import spacy
 from datetime import datetime
 
@@ -79,17 +78,6 @@ class MemoryWorker(HasLoggerClass):
     _llm: AbstractLanguageModel
     _emb_model: AbstractEmbeddingModel
     _nlp: AbstractNLPModel
-    _tunable_hyperparameters: Dict[str, float] = {
-        "temporal_score_weight": 1/3,
-        "access_count_weight": 1/3,
-        "semantic_score_weight": 1/3,
-        "semantic_weights": {
-            "refined_input_embedding": 1/4,
-            "refined_output_embedding": 1/4,
-            "input_embedding": 1/4,
-            "output_embedding": 1/4,
-        }   
-    }
     
     def __init__(self, llm: AbstractLanguageModel, emb_model: AbstractEmbeddingModel, nlp_model: AbstractNLPModel) -> None:
         """
@@ -282,96 +270,126 @@ class MemoryWorker(HasLoggerClass):
         mem_topic.identifying_features["embedding"] = topic_embedding
 
     # Memory block retrieval method (inside topic)
-    def _retrieval_temporal_score(self, turn_number, current_turn) -> float:
+    def __retrieval_temporal_score_weight(self, turn_number, current_turn) -> float:
+        """
+        Computes the temporal score weight for a memory block based on its turn number and the current turn.
+        """
         diff = turn_number - current_turn
         x = (2/3) * (7 - diff)
         return torch.sigmoid(torch.tensor(x, dtype=torch.float32)).item()
-    def _retrieval_access_score(self, access_count: int) -> float:
-        return np.log(access_count + 1)/np.log(30)
-    def _retrieval_semantic_similarity_score(self, raw_input_emb_similarity: float, raw_output_emb_similarity: float, refined_input_emb_similarity: float, refined_output_emb_similarity: float) -> float:
-        return self._tunable_hyperparameters["semantic_weights"]["input_embedding"] * raw_input_emb_similarity + self._tunable_hyperparameters["semantic_weights"]["output_embedding"] * raw_output_emb_similarity + self._tunable_hyperparameters["semantic_weights"]["refined_input_embedding"] * refined_input_emb_similarity + self._tunable_hyperparameters["semantic_weights"]["refined_output_embedding"] * refined_output_emb_similarity
-    def _retrieval_score(self, temporal_score: float, access_score: float, semantic_similarity_score: float) -> float:
-        return self._tunable_hyperparameters["temporal_score_weight"] * temporal_score + self._tunable_hyperparameters["access_count_weight"]* access_score + self._tunable_hyperparameters["semantic_score_weight"] * semantic_similarity_score
+    def __retrieval_access_score_weight(self, access_count: int) -> float:
+        return (torch.log(torch.tensor(access_count + 1.0)) / torch.log(torch.tensor(30.0))).item()
     
-    def memory_block_retrieval(self, mem_block: AbstractMemoryBlock, top_k: int = 5) -> List[AbstractMemoryBlock]:
-        container_topic_id = mem_block.topic_container_id
-        list_of_mem_blocks = AbstractMemoryTopic.get_memtopic_instance_by_id(container_topic_id).chain_of_memblocks
-        current_turn = len(list_of_mem_blocks)
-        
-        input_query = mem_block.input_query
-        input_query_emb = self._emb_model.encode(input_query)
-        
-        score_list = []
-        
-        for (turn_number, mem_block) in enumerate(list_of_mem_blocks):
-            # Calculate the temporal score
-            temporal_score = self._retrieval_temporal_score(turn_number, current_turn)
-            
-            # Calculate the access score
-            access_count = mem_block.access_count
-            access_score = self._retrieval_access_score(access_count)
-            
-            # Calculate the similarity score
-            raw_input_emb = mem_block.identifying_features["feature_for_raw_context"]["input_embedding"]
-            raw_input_emb_similarity = self._emb_model.similarity(input_query, raw_input_emb)
-            raw_output_emb = mem_block.identifying_features["feature_for_raw_context"]["output_embedding"]
-            raw_output_emb_similarity = self._emb_model.similarity(input_query, raw_output_emb)
-            refined_input_emb = mem_block.identifying_features["feature_for_refined_context"]["refined_input_embedding"]
-            refined_input_emb_similarity = self._retrieval_semantic_similarity_score(input_query_emb, refined_input_emb)
-            
-            semantic_similarity_score = self._retrieval_semantic_similarity_score(raw_input_emb_similarity, raw_output_emb_similarity, refined_input_emb_similarity, refined_output_emb_similarity)
-            # Calculate the overall retrieval score
-            retrieval_score = self._retrieval_score(temporal_score, access_score, semantic_similarity_score)
-
-            score_list.append((mem_block, retrieval_score))
-        
-        score_list.sort(key=lambda x: x[1], reverse=True)
-        
-        return [mem_block for mem_block, score in score_list[:top_k]]
-    
-    # Memory block arrangement method (choose memory topic to store memory block)
-    def _is_directly_connected(self, mem_block_1: AbstractMemoryBlock, mem_block_2: AbstractMemoryBlock) -> bool:
+    def calculate_keyword_matching_score(self, mem_block_1: AbstractMemoryBlock, mem_block_2: AbstractMemoryBlock, 
+                                       similarity_type: str = "jaccard") -> float:
         """
-        Check if two memory blocks are directly connected based on linguistic and semantic relationships.
+        Calculate keyword matching score between two memory blocks.
         
-        This method analyzes the relationship between two memory blocks by examining:
-        1. Coreference resolution - checking for conjunctions and appositions
-        2. Subject dependency - determining if the new query relies on previous context
-        3. Entity continuity - checking for shared entities between blocks
+        Formula options:
+        1. Jaccard Similarity: |A ∩ B| / |A ∪ B|
+        2. Cosine Similarity: |A ∩ B| / sqrt(|A| * |B|)
+        3. Intersection over Union (IoU): |A ∩ B| / |A ∪ B|
+        4. Dice Coefficient: 2 * |A ∩ B| / (|A| + |B|)
+        5. Overlap Coefficient: |A ∩ B| / min(|A|, |B|)
         
         Args:
-            mem_block_1 (AbstractMemoryBlock): The first memory block to compare
-            mem_block_2 (AbstractMemoryBlock): The second memory block to compare
+            mem_block_1: First memory block
+            mem_block_2: Second memory block
+            similarity_type: Type of similarity metric ("jaccard", "cosine", "iou", "dice", "overlap")
             
         Returns:
-            bool: True if the memory blocks are directly connected, False otherwise
+            float: Similarity score between 0 and 1
         """
-        mem_block_1_context = str(mem_block_1)
-        mem_block_2_context = str(mem_block_2)
+        # Extract keywords from both memory blocks
+        keywords_1 = set(mem_block_1.identifying_features["feature_for_raw_context"]["keywords"])
+        keywords_2 = set(mem_block_2.identifying_features["feature_for_raw_context"]["keywords"])
+        
+        # Calculate set operations
+        intersection = keywords_1 & keywords_2
+        union = keywords_1 | keywords_2
+        
+        # Handle edge cases
+        if not keywords_1 and not keywords_2:
+            return 0.0  # Both blocks have no keywords
+        if not keywords_1 or not keywords_2:
+            return 0.0  # One block has no keywords
+        
+        # Calculate similarity based on type
+        if similarity_type == "jaccard" or similarity_type == "iou":
+            # Jaccard Similarity / IoU: |A ∩ B| / |A ∪ B|
+            return len(intersection) / len(union)
+        
+        elif similarity_type == "cosine":
+            # Cosine Similarity: |A ∩ B| / sqrt(|A| * |B|)
+            return len(intersection) / (len(keywords_1) * len(keywords_2)) ** 0.5
+        
+        elif similarity_type == "dice":
+            # Dice Coefficient: 2 * |A ∩ B| / (|A| + |B|)
+            return (2 * len(intersection)) / (len(keywords_1) + len(keywords_2))
+        
+        elif similarity_type == "overlap":
+            # Overlap Coefficient: |A ∩ B| / min(|A|, |B|)
+            return len(intersection) / min(len(keywords_1), len(keywords_2))
+        
+        else:
+            # Default to Jaccard similarity
+            return len(intersection) / len(union)
+    
+    def memory_block_retrieval(self, mem_block: AbstractMemoryBlock, top_k: int = 5) -> List[AbstractMemoryBlock]:
+        self.logger.debug(f"Retrieving memory blocks for mem_block {mem_block.mem_block_id}")
+        
+        container_topic_ids = mem_block.topic_container_ids
+        container_topics = [AbstractMemoryTopic.get_memtopic_instance_by_id(container_topic_id) for container_topic_id in container_topic_ids]
+        list_of_mem_blocks_in_stacks = AbstractMemoryStack.get_memstack_instance_by_id(container_topics[0].stack_container_id).sequence_of_mem_blocks
+        current_turn = len(list_of_mem_blocks_in_stacks)
+        score_list = [(_mem_block, 0.0) for _mem_block in list_of_mem_blocks_in_stacks]
+        input_query = mem_block.input_query
+        input_query_emb = self._emb_model.encode(input_query)
 
-        # Combine previous response and new query for coreference resolution
-        combined_text = mem_block_1_context + " " + mem_block_2_context
-        doc = self._nlp(combined_text)
+        block_in_stack_embs = [mem_block.identifying_features["feature_for_raw_context"]["context_embedding"] for mem_block in list_of_mem_blocks_in_stacks]
         
-        # Check for coreferences linking the new query to the previous response
-        for token in doc:
-            if token.dep_ in ["conj", "appos"]:
-                return True
+        # Convert to torch tensors and perform matrix multiplication for similarity
+        query_tensor = torch.tensor(input_query_emb, dtype=torch.float32)
         
-        # Check if the new query lacks a subject (indicating reliance on previous context)
-        query_doc = self._nlp(mem_block_2_context)
-        has_subject = any(token.dep_ == "nsubj" for token in query_doc)
-        if not has_subject:
-            return True
+        # Handle potential None embeddings
+        embedding_dim = len(input_query_emb)
+        cleaned_block_embs = [emb if emb is not None else [0.0] * embedding_dim for emb in block_in_stack_embs]
         
-        # Check if the new query introduces a new subject or entity
-        prev_entities = set(ent.text.lower() for ent in self._nlp(mem_block_1_context).ents)
-        query_entities = set(ent.text.lower() for ent in query_doc.ents)
-        new_entities = query_entities - prev_entities
-        if not new_entities and query_entities:  # Shared entities, no new ones
-            return True
+        stack_matrix = torch.tensor(cleaned_block_embs, dtype=torch.float32)
         
-        return False
+        # Normalize for cosine similarity, which is generally better than raw dot product
+        query_tensor_norm = torch.nn.functional.normalize(query_tensor, p=2, dim=0)
+        stack_matrix_norm = torch.nn.functional.normalize(stack_matrix, p=2, dim=1)
+        
+        block_pairwise_semantic_similarity_scores_matrix = stack_matrix_norm @ query_tensor_norm
+        
+        for mb_idx, _mem_block in list(enumerate(list_of_mem_blocks_in_stacks))[:-1]:
+            shared_topic_score = 0.0
+            block_pairwise_semantic_similarity_score = block_pairwise_semantic_similarity_scores_matrix[mb_idx].item()
+            block_pairwise_keyword_matching_score = self.calculate_keyword_matching_score(_mem_block, mem_block)
+            # Compute intersection over union (IoU) of container_topic_ids lists
+            set1 = set(_mem_block.topic_container_ids)
+            set2 = set(mem_block.topic_container_ids)
+            intersection = set1 & set2
+            union = set1 | set2
+            shared_topic_score = len(intersection) / len(union) if union else 0.0
+            
+            # Calculate the temporal score
+            temporal_score_weight = self.__retrieval_temporal_score_weight(mb_idx, current_turn)
+            
+            # Calculate the access score
+            access_count = _mem_block.access_count
+            access_score_weight = self.__retrieval_access_score_weight(access_count)
+            
+            retrieval_score = 1/3 * (access_score_weight * temporal_score_weight * (block_pairwise_semantic_similarity_score + shared_topic_score + block_pairwise_keyword_matching_score))
+
+            score_list.append((_mem_block, retrieval_score))
+            self.logger.debug(f"Retrieval score for block {_mem_block.mem_block_id}: {retrieval_score}")
+        
+        score_list.sort(key=lambda x: x[1], reverse=True)
+        for mb, score in score_list:
+            self.logger.debug(f"mb: {mb.mem_block_id} | retrieval score: {score}")
+        return [mem_block for mem_block, score in score_list[:top_k]]
     
     def select_relevant_topics(self, new_mem_block: AbstractMemoryBlock, mem_stack: AbstractMemoryStack, top_n: int = 1) -> List[tuple[AbstractMemoryTopic, float]]:
         """
