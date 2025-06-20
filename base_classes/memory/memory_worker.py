@@ -223,11 +223,9 @@ class MemoryWorker(HasLoggerClass):
     # Memory Topic Methods
     def feature_engineer_for_memory_topic(self, mem_topic: AbstractMemoryTopic, alpha: float = 0.1, w: int = 5) -> None:
         mem_blocks = mem_topic.chain_of_memblocks
-        self.logger.debug(f"Feature engineering for Memory Topic {mem_topic.mem_topic_id} with {len(mem_blocks)} blocks.")
 
         # Keyword Engineering
         block_keywords = [mem_block.identifying_features["feature_for_raw_context"]["keywords"] for mem_block in mem_blocks]
-        self.logger.debug(f"Block keywords: {block_keywords}")
         if block_keywords:
             mem_topic.identifying_features["keywords"] = list(set.union(*(set(kw) for kw in block_keywords)))
         else:
@@ -375,61 +373,57 @@ class MemoryWorker(HasLoggerClass):
         
         return False
     
-    def select_relevant_topics(self, new_mem_block: AbstractMemoryBlock, mem_stack: AbstractMemoryStack, top_n: int = 1) -> List[AbstractMemoryTopic]:
-        if new_mem_block.mem_block_state == MemoryBlockState.EMPTY:
-            self.logger.warning("New query is None, please make sure the memory block is properly initialized.")
-            return []
-        prev_chat_turn: AbstractMemoryBlock = mem_stack.sequence_of_mem_blocks[-1]
-        current_chat_turn: AbstractMemoryBlock = new_mem_block
-        if self._is_directly_connected(prev_chat_turn, current_chat_turn):
-            return [AbstractMemoryTopic.get_memtopic_instance_by_id(topic_container_id) for topic_container_id in prev_chat_turn.topic_container_ids]
-        
-        return self._select_relevant_topics(current_chat_turn.input_query, prev_chat_turn.output_response, mem_stack.list_of_mem_topics, top_n)
-    
-    def _select_relevant_topics(self, new_query: str, prev_response: str, topics: List[AbstractMemoryTopic], top_n: int = 1) -> List[AbstractMemoryTopic]:
+    def select_relevant_topics(self, new_mem_block: AbstractMemoryBlock, mem_stack: AbstractMemoryStack, top_n: int = 1) -> List[tuple[AbstractMemoryTopic, float]]:
         """
-        Select the most relevant memory topic(s) for the new query.
-        If directly connected to the previous response, return the current topic.
-        Otherwise, use semantic similarity, keyword matching, NER, and temporal weighting.
+        Select relevant topics for a new memory block using rule-based and semantic similarity as described in the provided algorithm.
+        Returns a list of (topic, score) tuples.
         """
-        if not topics:
-            return []
-        
-        # If directly connected, return the most recent topic (assumed current)
-        if self._is_directly_connected(new_query, prev_response):
-            return [topics[-1]]
-        
-        # Encode the new query
-        query_embedding = self._emb_model.encode(new_query)
-        query_doc = self._nlp(new_query)
-        query_entities = set(ent.text.lower() for ent in query_doc.ents)
-        query_tokens = set(new_query.lower().split())
-        
-        # Compute similarity scores for all topics
-        similarity_scores = []
-        current_time = datetime.now()
-        
-        for topic in topics:
-            # Semantic similarity
-            sem_sim = torch.cosine_similarity(query_embedding, topic.identifying_features["refined_context_embedding"]).item()
-            
-            # Keyword matching (simple overlap)
-            context_tokens = set(topic.context.lower().split())
-            keyword_overlap = len(query_tokens.intersection(context_tokens)) / max(len(query_tokens), 1)
-            
-            # NER-based matching
-            topic_doc = self._nlp(topic.context)
-            topic_entities = set(ent.text.lower() for ent in topic_doc.ents)
-            entity_overlap = len(query_entities.intersection(topic_entities)) / max(len(query_entities), 1) if query_entities else 0
-            
-            # Temporal weighting (more recent topics get a slight boost)
-            time_diff = (current_time - topic.timestamp).total_seconds() / (24 * 3600)  # Days difference
-            temporal_weight = max(0.5, 1 - time_diff / 30)  # Decay over 30 days, min 0.5
-            
-            # Combine scores with weights
-            combined_score = (0.5 * sem_sim) + (0.2 * keyword_overlap) + (0.2 * entity_overlap) + (0.1 * temporal_weight)
-            similarity_scores.append((topic, combined_score))
-        
-        # Sort by score and return top N topics
-        similarity_scores.sort(key=lambda x: x[1], reverse=True)
-        return [topic for topic, _ in similarity_scores[:top_n]]
+
+        query = new_mem_block.input_query
+        query_keywords = set(self._nlp.extract_keywords(query))
+        query_word_count = len(self._nlp.tokenize(query))
+        self.logger.debug(f"query_word_count: {query_word_count}")
+        all_topics = mem_stack.list_of_mem_topics
+        last_chat_block = mem_stack.sequence_of_mem_blocks[-1] if mem_stack.sequence_of_mem_blocks else None
+        topic_scores = []
+
+        for topic in all_topics:
+            self.logger.debug(f"Processing topic {topic.mem_topic_id}")
+            topic_keywords = set(topic.identifying_features.get("keywords", []))
+            topic_blocks = topic.chain_of_memblocks
+            if not topic_blocks:
+                continue
+            last_block = topic_blocks[-1]
+            self.logger.debug(f"Last block of topic {topic.mem_topic_id}: {last_block.mem_block_id}")
+            # Rule 1: |q| < 6 and last block is from last chat
+            if query_word_count < 6 and last_chat_block and last_block.mem_block_id == last_chat_block.mem_block_id:
+                topic_scores.append((topic, 1.0))
+                self.logger.debug(f"Rule 1 - topic_scores: {topic_scores}")
+                continue
+
+            # Rule 2: Any keyword in query appears only in this topic
+            keyword_match_count = len(query_keywords & topic_keywords)
+            if keyword_match_count > 0:
+                topic_scores.append((topic, float(keyword_match_count)))
+                self.logger.debug(f"Rule 2 - topic_scores: {topic_scores}")
+                continue
+
+            # Rule 3: Semantic similarity (dot product)
+            topic_emb = topic.identifying_features.get("embedding", None)
+            if topic_emb is not None:
+                query_emb = self._emb_model.encode(query)
+                # Ensure both are tensors
+                import torch
+                topic_emb_tensor = torch.tensor(topic_emb, dtype=torch.float64)
+                query_emb_tensor = torch.tensor(query_emb, dtype=torch.float64)
+                sim = float(torch.dot(query_emb_tensor, topic_emb_tensor) / (torch.norm(query_emb_tensor) * torch.norm(topic_emb_tensor) + 1e-8))
+                topic_scores.append((topic, sim))
+            else:
+                topic_scores.append((topic, 0.0))
+            self.logger.debug(f"Rule 3 - topic_scores: {topic_scores}")
+
+        # Sort by score descending and return top_n (topic, score) tuples
+        topic_scores.sort(key=lambda x: x[1], reverse=True)
+        if top_n == -1:
+            return topic_scores
+        return topic_scores[:top_n]
