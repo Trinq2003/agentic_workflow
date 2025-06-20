@@ -105,7 +105,8 @@ class MemoryWorker(HasLoggerClass):
         
         self.logger.debug(f"Memory Worker initialized with LLM: {self._llm.llm_id}, Embedding Model: {self._emb_model.emb_id}, NLP Model: {self._nlp.nlp_model_id}.")
     
-    # Memory block context refinement methods
+    # Memory Block Methods
+    ## Memory block context refinement methods
     def refine_input_query(self, mem_block: AbstractMemoryBlock) -> None:
         _refine_prompt = ICIOPrompt(
             instruction="",
@@ -136,7 +137,7 @@ class MemoryWorker(HasLoggerClass):
         
         mem_block.mem_block_state = MemoryBlockState.REFINED_INPUT_AND_OUTPUT
     
-    # Memory block feature engineering methods
+    ## Memory block feature engineering methods
     def _extract_keywords_for_memory_block(self, mem_block: AbstractMemoryBlock) -> Dict[str, List[str]]:
         """
         Extract important keywords (nouns) from the input string using NLP.
@@ -219,6 +220,69 @@ class MemoryWorker(HasLoggerClass):
         
         mem_block.mem_block_state = MemoryBlockState.FEATURE_ENGINEERED
     
+    # Memory Topic Methods
+    def feature_engineer_for_memory_topic(self, mem_topic: AbstractMemoryTopic, alpha: float = 0.1, w: int = 5) -> None:
+        mem_blocks = mem_topic.chain_of_memblocks
+        self.logger.debug(f"Feature engineering for Memory Topic {mem_topic.mem_topic_id} with {len(mem_blocks)} blocks.")
+
+        # Keyword Engineering
+        block_keywords = [mem_block.identifying_features["feature_for_raw_context"]["keywords"] for mem_block in mem_blocks]
+        self.logger.debug(f"Block keywords: {block_keywords}")
+        if block_keywords:
+            mem_topic.identifying_features["keywords"] = list(set.union(*(set(kw) for kw in block_keywords)))
+        else:
+            mem_topic.identifying_features["keywords"] = []
+        self.logger.debug(f"Memtopic keywords: {mem_topic.identifying_features['keywords']}")
+        # Embedding Engineering
+        """
+        Computes the topic embedding using a sigmoid-based temporal weighting function.
+
+        This method implements the formula:
+        e_t_i = sum_{j=1}^{m_i} sigma(alpha * (j - (m_i - w))) * e_t_i,j
+
+        where:
+        - e_t_i: The topic embedding vector.
+        - m_i: The number of blocks in the topic.
+        - j: The 1-based index of a block in the topic.
+        - w: The window size parameter (default: 5).
+        - alpha: The temporal decay factor (default: 0.1).
+        - sigma(x) = 1 / (1 + e^(-x)) is the sigmoid function.
+        - e_t_i,j: The embedding vector of the j-th block.
+
+        :param mem_topic: The memory topic to compute the embedding for.
+        :param alpha: The temporal decay factor.
+        :param w: The window size parameter.
+        """
+        
+        m_i = len(mem_blocks)
+
+        if m_i == 0:
+            self.logger.warning(f"Topic {mem_topic.mem_topic_id} has no memory blocks. Cannot compute topic embedding.")
+            return None
+
+        first_block_embedding = mem_blocks[0].identifying_features["feature_for_raw_context"]["context_embedding"]
+        if first_block_embedding is None:
+            self.logger.warning(f"The first block in topic {mem_topic.mem_topic_id} does not have a context embedding. Cannot compute topic embedding.")
+            return None
+
+        embedding_dim = len(first_block_embedding)
+        topic_embedding = torch.zeros(embedding_dim, dtype=torch.float64)
+
+        for j, mem_block in enumerate(mem_blocks):
+            block_embedding = mem_block.identifying_features["feature_for_raw_context"]["context_embedding"]
+            
+            if block_embedding is None:
+                self.logger.warning(f"Memory block {mem_block.mem_block_id} at index {j} is missing context embedding. Skipping.")
+                continue
+
+            x = alpha * ((j + 1) - (m_i - w))
+            sigmoid_weight = 1 / (1 + torch.exp(torch.tensor(-x, dtype=torch.float64)))
+            # self.logger.debug(f"Sigmoid weight: {sigmoid_weight}")
+            
+            topic_embedding += sigmoid_weight * torch.tensor(block_embedding, dtype=torch.float64)
+
+        mem_topic.identifying_features["embedding"] = topic_embedding
+
     # Memory block retrieval method (inside topic)
     def _retrieval_temporal_score(self, turn_number, current_turn) -> float:
         diff = turn_number - current_turn
@@ -268,13 +332,27 @@ class MemoryWorker(HasLoggerClass):
         return [mem_block for mem_block, score in score_list[:top_k]]
     
     # Memory block arrangement method (choose memory topic to store memory block)
-    def _is_directly_connected(self, new_query: str, prev_response: str) -> bool:
+    def _is_directly_connected(self, mem_block_1: AbstractMemoryBlock, mem_block_2: AbstractMemoryBlock) -> bool:
         """
-        Check if the new query is directly connected to the previous response.
-        Uses coreference resolution, subject detection, and entity overlap.
+        Check if two memory blocks are directly connected based on linguistic and semantic relationships.
+        
+        This method analyzes the relationship between two memory blocks by examining:
+        1. Coreference resolution - checking for conjunctions and appositions
+        2. Subject dependency - determining if the new query relies on previous context
+        3. Entity continuity - checking for shared entities between blocks
+        
+        Args:
+            mem_block_1 (AbstractMemoryBlock): The first memory block to compare
+            mem_block_2 (AbstractMemoryBlock): The second memory block to compare
+            
+        Returns:
+            bool: True if the memory blocks are directly connected, False otherwise
         """
+        mem_block_1_context = str(mem_block_1)
+        mem_block_2_context = str(mem_block_2)
+
         # Combine previous response and new query for coreference resolution
-        combined_text = prev_response + " " + new_query
+        combined_text = mem_block_1_context + " " + mem_block_2_context
         doc = self._nlp(combined_text)
         
         # Check for coreferences linking the new query to the previous response
@@ -283,13 +361,13 @@ class MemoryWorker(HasLoggerClass):
                 return True
         
         # Check if the new query lacks a subject (indicating reliance on previous context)
-        query_doc = self._nlp(new_query)
+        query_doc = self._nlp(mem_block_2_context)
         has_subject = any(token.dep_ == "nsubj" for token in query_doc)
         if not has_subject:
             return True
         
         # Check if the new query introduces a new subject or entity
-        prev_entities = set(ent.text.lower() for ent in self._nlp(prev_response).ents)
+        prev_entities = set(ent.text.lower() for ent in self._nlp(mem_block_1_context).ents)
         query_entities = set(ent.text.lower() for ent in query_doc.ents)
         new_entities = query_entities - prev_entities
         if not new_entities and query_entities:  # Shared entities, no new ones
@@ -297,7 +375,18 @@ class MemoryWorker(HasLoggerClass):
         
         return False
     
-    def select_relevant_topics(self, new_query: str, prev_response: str, topics: List[AbstractMemoryTopic], top_n: int = 1) -> List[AbstractMemoryTopic]:
+    def select_relevant_topics(self, new_mem_block: AbstractMemoryBlock, mem_stack: AbstractMemoryStack, top_n: int = 1) -> List[AbstractMemoryTopic]:
+        if new_mem_block.mem_block_state == MemoryBlockState.EMPTY:
+            self.logger.warning("New query is None, please make sure the memory block is properly initialized.")
+            return []
+        prev_chat_turn: AbstractMemoryBlock = mem_stack.sequence_of_mem_blocks[-1]
+        current_chat_turn: AbstractMemoryBlock = new_mem_block
+        if self._is_directly_connected(prev_chat_turn, current_chat_turn):
+            return [AbstractMemoryTopic.get_memtopic_instance_by_id(topic_container_id) for topic_container_id in prev_chat_turn.topic_container_ids]
+        
+        return self._select_relevant_topics(current_chat_turn.input_query, prev_chat_turn.output_response, mem_stack.list_of_mem_topics, top_n)
+    
+    def _select_relevant_topics(self, new_query: str, prev_response: str, topics: List[AbstractMemoryTopic], top_n: int = 1) -> List[AbstractMemoryTopic]:
         """
         Select the most relevant memory topic(s) for the new query.
         If directly connected to the previous response, return the current topic.

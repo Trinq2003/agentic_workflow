@@ -1,5 +1,6 @@
 from typing import Union, Iterable, Optional
 from typing_extensions import Literal, Required, TypeAlias, TypedDict
+import torch
 
 class BlockFeatureForRefinedContent(TypedDict, total=False):
     keywords: Optional[Iterable[str]] = []
@@ -15,5 +16,5 @@ class MemoryBlockFeature(TypedDict, total=False):
     feature_for_raw_context: Optional[BlockFeatureForRawContent]
     
 class MemoryTopicFeature(TypedDict, total=False):
-    raw_context_embedding: Optional[Iterable[float]]
-    refined_context_embedding: Optional[Iterable[float]]
+    keywords: Optional[Iterable[str]] = []
+    embedding: Optional[torch.Tensor] = None

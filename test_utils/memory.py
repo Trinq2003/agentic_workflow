@@ -8,29 +8,23 @@ from prompt.tool_message import ToolMessagePrompt
 from base_classes.memory.memory_atom import AbstractMemoryAtom
 from base_classes.memory.memory_block import AbstractMemoryBlock
 from base_classes.memory.memory_topic import AbstractMemoryTopic
+from base_classes.memory.memory_stack import AbstractMemoryStack
 from base_classes.memory.datatypes.data_item import PromptDataItem
 from base_classes.memory.memory_worker import MemoryWorker
 
-# Memory Atom
 ## Chat turn 1:
 prompt_data_1 = [{
     'role': 'user',
-    'content': 'Calculate the sum of 11 and 20.\nHaha'
+    'content': 'Calculate the sum of 11 and 20.'
 }]
-mem_atom_1 = AbstractMemoryAtom(data=PromptDataItem(UserMessagePrompt(prompt_data_1)))
-
 prompt_data_2 = [{
     'role': 'assistant',
     'content': 'In order to calculate the sum of two numbers, we need to do the following:\n\t1. Write a Python code with add_sum() function, receiving 2 variables.\n\t2. Execute the code with the given variables.\n\t3. Return the result of the sum.'
 }]
-mem_atom_2 = AbstractMemoryAtom(data=PromptDataItem(AssistantMessagePrompt(prompt_data_2)))
-
 prompt_data_3 = [{
     'role': 'assistant',
     'content': 'Here is the Python code to calculate the sum of two numbers:\n\n```python\na = 11\nb = 20\nresult = a + b\n\nprint(f"The sum of {a} and {b} is {result}.")\n```'
 }]
-mem_atom_3 = AbstractMemoryAtom(data=PromptDataItem(AssistantMessagePrompt(prompt_data_3)))
-
 prompt_data_4 = [{
     'role': 'tool',
     'content': {
@@ -41,27 +35,19 @@ prompt_data_4 = [{
     },
     'result': '31'
 }]
-mem_atom_4 = AbstractMemoryAtom(data=PromptDataItem(ToolMessagePrompt(prompt_data_4)))
-
 prompt_data_5 = [{
     'role': 'assistant',
     'content': 'After executing the code, we got the sum of 11 and 20 is 31.'
 }]
-mem_atom_5 = AbstractMemoryAtom(data=PromptDataItem(AssistantMessagePrompt(prompt_data_5)))
-
 ## Chat turn 2:
 prompt_data_6 = [{
     'role': 'user',
     'content': 'Can you show me how to use run_python_code() to add 100 and 250?'
 }]
-mem_atom_6 = AbstractMemoryAtom(data=PromptDataItem(UserMessagePrompt(prompt_data_6)))
-
 prompt_data_7 = [{
     'role': 'assistant',
     'content': 'Sure! To use run_python_code() for 100 and 250, you would call:\n\nrun_python_code(code="a = 100\nb = 250\nresult = a + b\n\nprint(f"The sum of {a} and {b} is {result}.")\nreturn result")'
 }]
-mem_atom_7 = AbstractMemoryAtom(data=PromptDataItem(AssistantMessagePrompt(prompt_data_7)))
-
 prompt_data_8 = [{
     'role': 'tool',
     'content': {
@@ -72,21 +58,15 @@ prompt_data_8 = [{
     },
     'result': '350'
 }]
-mem_atom_8 = AbstractMemoryAtom(data=PromptDataItem(ToolMessagePrompt(prompt_data_8)))
-
 prompt_data_9 = [{
     'role': 'assistant',
     'content': 'The result of run_python_code(code="a = 100\nb = 250\nresult = a + b\n\nprint(f"The sum of {a} and {b} is {result}.")\nreturn result") is 350.'
 }]
-mem_atom_9 = AbstractMemoryAtom(data=PromptDataItem(AssistantMessagePrompt(prompt_data_9)))
-
 ## Chat turn 3:
 prompt_data_10 = [{
     'role': 'user',
     'content': 'What if I want to add a list of numbers, like [5, 10, 15, 20]?'
 }]
-mem_atom_10 = AbstractMemoryAtom(data=PromptDataItem(UserMessagePrompt(prompt_data_10)))
-
 prompt_data_11 = [{
     'role': 'assistant',
     'content': (
@@ -96,15 +76,11 @@ prompt_data_11 = [{
         'print(total)  # Output: 50\n'
     )
 }]
-mem_atom_11 = AbstractMemoryAtom(data=PromptDataItem(AssistantMessagePrompt(prompt_data_11)))
-
 ## Chat turn 4:
 prompt_data_12 = [{
     'role': 'user',
     'content': 'Can you write a function that multiplies all numbers in a list?'
 }]
-mem_atom_12 = AbstractMemoryAtom(data=PromptDataItem(UserMessagePrompt(prompt_data_12)))
-
 prompt_data_13 = [{
     'role': 'assistant',
     'content': (
@@ -117,15 +93,11 @@ prompt_data_13 = [{
         'Example: multiply_list([2, 3, 4]) returns 24.'
     )
 }]
-mem_atom_13 = AbstractMemoryAtom(data=PromptDataItem(AssistantMessagePrompt(prompt_data_13)))
-
 ## Chat turn 5:
 prompt_data_14 = [{
     'role': 'user',
     'content': 'Let\'s try your multiply_list function with [1, 2, 3, 4, 5]. What is the result?'
 }]
-mem_atom_14 = AbstractMemoryAtom(data=PromptDataItem(UserMessagePrompt(prompt_data_14)))
-
 prompt_data_15 = [{
     'role': 'assistant',
     'content': (
@@ -133,8 +105,6 @@ prompt_data_15 = [{
         'Let me calculate it for you.'
     )
 }]
-mem_atom_15 = AbstractMemoryAtom(data=PromptDataItem(AssistantMessagePrompt(prompt_data_15)))
-
 prompt_data_16 = [{
     'role': 'tool',
     'content': {
@@ -145,21 +115,15 @@ prompt_data_16 = [{
     },
     'result': 120
 }]
-mem_atom_16 = AbstractMemoryAtom(data=PromptDataItem(ToolMessagePrompt(prompt_data_16)))
-
 prompt_data_17 = [{
     'role': 'assistant',
     'content': 'The result of multiplying all numbers in [1, 2, 3, 4, 5] is 120.'
 }]
-mem_atom_17 = AbstractMemoryAtom(data=PromptDataItem(AssistantMessagePrompt(prompt_data_17)))
-
 ## Chat turn 6:
 prompt_data_18 = [{
     'role': 'user',
     'content': 'If I have 10 apples, eat 3, add 7, and then eat 2, how many apples do I have?'
 }]
-mem_atom_18 = AbstractMemoryAtom(data=PromptDataItem(UserMessagePrompt(prompt_data_18)))
-
 prompt_data_19 = [{
     'role': 'assistant',
     'content': (
@@ -171,6 +135,26 @@ prompt_data_19 = [{
         'You have 12 apples.'
     )
 }]
+
+# Memory Atom
+mem_atom_1 = AbstractMemoryAtom(data=PromptDataItem(UserMessagePrompt(prompt_data_1)))
+mem_atom_2 = AbstractMemoryAtom(data=PromptDataItem(AssistantMessagePrompt(prompt_data_2)))
+mem_atom_3 = AbstractMemoryAtom(data=PromptDataItem(AssistantMessagePrompt(prompt_data_3)))
+mem_atom_4 = AbstractMemoryAtom(data=PromptDataItem(ToolMessagePrompt(prompt_data_4)))
+mem_atom_5 = AbstractMemoryAtom(data=PromptDataItem(AssistantMessagePrompt(prompt_data_5)))
+mem_atom_6 = AbstractMemoryAtom(data=PromptDataItem(UserMessagePrompt(prompt_data_6)))
+mem_atom_7 = AbstractMemoryAtom(data=PromptDataItem(AssistantMessagePrompt(prompt_data_7)))
+mem_atom_8 = AbstractMemoryAtom(data=PromptDataItem(ToolMessagePrompt(prompt_data_8)))
+mem_atom_9 = AbstractMemoryAtom(data=PromptDataItem(AssistantMessagePrompt(prompt_data_9)))
+mem_atom_10 = AbstractMemoryAtom(data=PromptDataItem(UserMessagePrompt(prompt_data_10)))
+mem_atom_11 = AbstractMemoryAtom(data=PromptDataItem(AssistantMessagePrompt(prompt_data_11)))
+mem_atom_12 = AbstractMemoryAtom(data=PromptDataItem(UserMessagePrompt(prompt_data_12)))
+mem_atom_13 = AbstractMemoryAtom(data=PromptDataItem(AssistantMessagePrompt(prompt_data_13)))
+mem_atom_14 = AbstractMemoryAtom(data=PromptDataItem(UserMessagePrompt(prompt_data_14)))
+mem_atom_15 = AbstractMemoryAtom(data=PromptDataItem(AssistantMessagePrompt(prompt_data_15)))
+mem_atom_16 = AbstractMemoryAtom(data=PromptDataItem(ToolMessagePrompt(prompt_data_16)))
+mem_atom_17 = AbstractMemoryAtom(data=PromptDataItem(AssistantMessagePrompt(prompt_data_17)))
+mem_atom_18 = AbstractMemoryAtom(data=PromptDataItem(UserMessagePrompt(prompt_data_18)))
 mem_atom_19 = AbstractMemoryAtom(data=PromptDataItem(AssistantMessagePrompt(prompt_data_19)))
 
 # Memory Block
@@ -260,15 +244,22 @@ mem_block_6.mem_atom_graph = {
 
 mem_block_6.output_response = mem_atom_19.data.content.prompt[0]['content']
 
+# Memory Stack
+mem_stack = AbstractMemoryStack()
+
 # Memory Topic
 mem_topic_1 = AbstractMemoryTopic()
-mem_topic_1.add_memory_block(mem_block_1)
-mem_topic_1.add_memory_block(mem_block_2)
-mem_topic_1.add_memory_block(mem_block_3)
-
 mem_topic_2 = AbstractMemoryTopic()
-mem_topic_2.add_memory_block(mem_block_4)
-mem_topic_2.add_memory_block(mem_block_5)
-
 mem_topic_3 = AbstractMemoryTopic()
-mem_topic_3.add_memory_block(mem_block_6)
+mem_stack.add_mem_topic(mem_topic_1)
+mem_stack.add_mem_topic(mem_topic_2)
+mem_stack.add_mem_topic(mem_topic_3)
+
+mem_topic_1.add_mem_block(mem_block_1)
+mem_topic_1.add_mem_block(mem_block_2)
+mem_topic_1.add_mem_block(mem_block_3)
+
+mem_topic_2.add_mem_block(mem_block_4)
+mem_topic_2.add_mem_block(mem_block_5)
+
+mem_topic_3.add_mem_block(mem_block_6)
