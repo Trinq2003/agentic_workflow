@@ -1,14 +1,21 @@
 tool_id: "demonstration_sampling"
 
 webhook:
-  base_url: "http://localhost:8080"
-  webhook_path: "webhook/15bda51a-cf8d-4fdd-8be9-40d5da99a7d0"
+  base_url: "http://localhost:8000"
+  webhook_path: "/api/v1/retrieval"
   method: "POST"
 
 headers:
   content_type: "application/json"
-  authorization: "Bearer no-key"
+  authorization: "Bearer ragflow-VmYmNhZDAyZjVmMzExZWY5NjAxMDI0Mm"
 
-payload:
-  message:
-    type: 'str'
+ragflow:
+  dataset_ids:
+    - "a4f5154450c911f089210242ac1b0005"
+  page: 1
+  page_size: 5
+  similarity_threshold: 0.2
+  vector_similarity_weight: 0.3
+  top_k: 1024
+  keyword: false
+  highlight: true

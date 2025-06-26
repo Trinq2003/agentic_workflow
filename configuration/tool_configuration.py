@@ -1,4 +1,4 @@
-from typing import Required, Optional
+from typing import Required, Optional, List
 
 from base_classes.configuration import Configuration
 
@@ -17,7 +17,7 @@ class ToolConfiguration(Configuration):
         super().__init__()
 
         # Define sensitive properties (if any)
-        sensitive_properties = ['headers_authorization']
+        sensitive_properties = ['headers.authorization']
         self.sensitive_properties = [property_.replace('.', '_') for property_ in sensitive_properties]
 
     def _init_properties(self):
@@ -32,3 +32,29 @@ class ToolConfiguration(Configuration):
             ['headers.content_type', 'application/json', str],  # Headers for the webhook
             ['headers.authorization', '', str],  # Authorization headers for the webhook
         ]
+
+class DemonstrationSamplingToolConfiguration(ToolConfiguration):
+    ragflow_dataset_ids: list[str]
+    ragflow_page: int
+    ragflow_page_size: int
+    ragflow_similarity_threshold: float
+    ragflow_vector_similarity_weight: float
+    ragflow_top_k: int
+    ragflow_keyword: bool
+    ragflow_highlight: bool
+    def __init__(self):
+        super().__init__()
+        
+    def _init_properties(self):
+        base_properties = super()._init_properties()
+        ragflow_properties = [
+            ['ragflow.dataset_ids', [], list[str]],
+            ['ragflow.page', 1, int],
+            ['ragflow.page_size', 5, int],
+            ['ragflow.similarity_threshold', 0.2, float],
+            ['ragflow.vector_similarity_weight', 0.3, float],
+            ['ragflow.top_k', 1024, int],
+            ['ragflow.keyword', False, bool],
+            ['ragflow.highlight', False, bool],
+        ]
+        return base_properties + ragflow_properties

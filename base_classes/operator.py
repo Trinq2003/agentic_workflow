@@ -5,7 +5,6 @@ from base_classes.prompt import AbstractPrompt
 from base_classes.llm import AbstractLanguageModel
 from base_classes.tool import AbstractTool
 from base_classes.system_component import SystemComponent
-from base_classes.memory.memory_block import AbstractMemoryBlock
 from configuration.operator_configuration import OperatorConfiguration
 
 class AbstractOperator(SystemComponent):
@@ -17,7 +16,6 @@ class AbstractOperator(SystemComponent):
     _operator_type: str = None
     _enabled: bool = None
     _operator_instances_by_id: Dict[str, Self] = {}
-    memory_block: AbstractMemoryBlock = None
     
     _llm_component: List[AbstractLanguageModel] = None
     _tool_component: List[AbstractTool] = None

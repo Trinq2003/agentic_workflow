@@ -11,7 +11,6 @@ from prompt.few_shot import FewShotPrompt
 from prompt.assistant_message import AssistantMessagePrompt
 from tools.demonstration_sampling import DemonstrationSamplingTool
 from base_classes.memory.memory_atom import AbstractMemoryAtom
-from base_classes.memory.memory_block import AbstractMemoryBlock
 from base_classes.memory.datatypes.data_item import PromptDataItem
 from operators.op_prompt import COT_DEMONSTRATION_SAMPLING
 
@@ -38,8 +37,9 @@ class CoTOperator(AbstractOperator):
         """
         This method is used to run the CoT operator.
         """
-        self.memory_block: AbstractMemoryBlock = AbstractMemoryBlock()
-    
+        # Operator execution logic
+        demonstration_samples: FewShotPrompt = self._demonstration_sampling(input_message = input_message)
+        
         input_message.prompt[0]["content"] = input_message.prompt[0]["content"] + textwrap.dedent(
             """
             \n\nSolution Protocol:
@@ -53,33 +53,10 @@ class CoTOperator(AbstractOperator):
             """
         )
         
-        # Store the input message in memory block
-        input_message_mem_atom = AbstractMemoryAtom(
-            data = PromptDataItem(content = input_message, source = "user")
-        )
-        self.memory_block.add_memory_atom(input_message_mem_atom)
-        
-        demonstration_samples: FewShotPrompt = self._demonstration_sampling(input_message = input_message)
-        # Store the demonstration samples in memory block
-        demonstration_samples_mem_atom = AbstractMemoryAtom(
-            data = PromptDataItem(content = demonstration_samples, source = self._construct_cot_tool)
-        )
-        self.memory_block.add_memory_atom(demonstration_samples_mem_atom)
-        
         final_cot_prompt = demonstration_samples.prompt.append(input_message.prompt[0])
         cot_query_answer: ChatCompletion = self._cot_llm.query(prompt = final_cot_prompt, num_responses= 1)
         cot_answer: AssistantMessagePrompt = AssistantMessagePrompt(cot_query_answer.choices[0].message.content)
-        # Store the CoT answer in memory block
-        cot_answer_mem_atom = AbstractMemoryAtom(
-            data = PromptDataItem(content = cot_answer, source = self._cot_llm)
-        )
-        self.memory_block.add_memory_atom(cot_answer_mem_atom)
-        
-        cot_answer_mem_atom.required_atom.append(demonstration_samples_mem_atom.mem_atom_id)
-        demonstration_samples_mem_atom.required_atom.append(input_message_mem_atom.mem_atom_id)
-        
-        input_message_mem_atom.requiring_atom.append(demonstration_samples_mem_atom.mem_atom_id)
-        demonstration_samples_mem_atom.requiring_atom.append(cot_answer_mem_atom.mem_atom_id)
+
         
         return AssistantMessagePrompt(cot_answer)
     
