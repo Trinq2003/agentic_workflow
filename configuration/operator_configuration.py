@@ -40,6 +40,7 @@ class CoTOperatorConfiguration(OperatorConfiguration):
     """
     Configuration class for CoT operator.
     """
+    cot_prompt_instruction: str
     def __init__(self):
         super().__init__()
         sensitive_properties = []
@@ -50,7 +51,9 @@ class CoTOperatorConfiguration(OperatorConfiguration):
         """
         Define properties for CoT operator.
         """
-        return []
+        return [
+            ['cot.prompt.instruction', '', str], # CoT prompt instruction
+        ]
 
 class ReActOperatorConfiguration(OperatorConfiguration):
     """
@@ -70,7 +73,7 @@ class ReActOperatorConfiguration(OperatorConfiguration):
         Define properties for CoT operator.
         """
         return [
-            ['tool.tool_chooser', '', str] # Tool chooser
+            ['tool.tool_chooser', '', str], # Tool chooser
             ['tool.callable', [], list], # Callable tools
             ['max_iterations', 10, int], # Max iterations
         ]

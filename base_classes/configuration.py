@@ -63,7 +63,9 @@ class Configuration(HasLoggerClass):
                 if transform_fn is not None:
                     value = transform_fn(value)
 
-                full_key = f"{section.lower().strip('.')}_{key}" if section else f"{key}"
+                # Convert dots to underscores in the section and key
+                section_clean = section.lower().strip('.').replace('.', '_')
+                full_key = f"{section_clean}_{key}" if section_clean else f"{key}"
                 setattr(self, full_key, value)
 
     def _mask_secret(self, value: str, visible_chars: int = 1) -> str:

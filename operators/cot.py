@@ -50,7 +50,7 @@ class CoTOperator(AbstractOperator):
         This method is used to run the CoT operator.
         """
         # Operator execution logic
-        instruction_prompt = SystemMessagePrompt(prompt = [{"role": "system", "content": COT_INSTRUCTION_PROMPT}])
+        instruction_prompt = SystemMessagePrompt(prompt = [{"role": "system", "content": self._config.cot_prompt_instruction}])
         demonstration_samples: FewShotPrompt = await self._demonstration_sampling(input_message = input_message)
         user_prompt = UserMessagePrompt(prompt = [{"role": "user", "content": f"The user query is: \n <problem>{input_message.prompt[0].get('content')}</problem>. \n Please generate the plan following the given instruction."}])
 
