@@ -151,7 +151,7 @@ class RequestLLM(AbstractLanguageModel):
                 messages,
                 stop=stop
             )
-            self.logger.debug(f"Response: {response}")
+            # self.logger.debug(f"Response: {response}")
             
             # Convert LangChain response to OpenAI ChatCompletion format
             return ChatCompletion.model_validate({

@@ -80,26 +80,41 @@ class ReActOperatorConfiguration(OperatorConfiguration):
         
 class DebateOperatorConfiguration(OperatorConfiguration):
     """
-    Configuration class for CoT operator.
+    Configuration class for Debate operator.
     """
-    debate_num_of_round: int
+    debate_num_of_rounds: int
     debate_num_of_debaters: int
-    debate_config: Dict[str, Any]
+    debate_config_individual_configs: List[Dict[str, Any]]
+    
     def __init__(self):
         super().__init__()
         sensitive_properties = []
         self.sensitive_properties = [property_.replace('.', '_') for property_ in sensitive_properties]
 
-
     def _init_properties(self):
         """
-        Define properties for CoT operator.
+        Define properties for Debate operator.
         """
         return [
-            ['debate.num_of_round', '', int], # Number of rounds
-            ['debate.num_of_debaters', '', int], # Number of debaters
-            ['debate.config', {}, dict], # Debate configuration
+            ['debate.num_of_rounds', 5, int], # Number of rounds
+            ['debate.num_of_debaters', 3, int], # Number of debaters
+            ['debate.config.individual_configs', [], list], # Individual debater configurations
         ]
+    
+    def get_debater_configs(self) -> List[Dict[str, str]]:
+        """
+        Extract individual debater configurations from the loaded config.
+        
+        :return: List of debater configurations with llm_id
+        :rtype: List[Dict[str, str]]
+        """
+        debater_configs = []
+        self.logger.debug(f"Debater configs: {self.debate_config_individual_configs}")
+        if hasattr(self, 'debate_config_individual_configs') and self.debate_config_individual_configs:
+            for config_item in self.debate_config_individual_configs:
+                if isinstance(config_item, dict) and 'debater' in config_item:
+                    debater_configs.append(config_item['debater'])
+        return debater_configs
 
 class SelfConsistencyOperatorConfiguration(OperatorConfiguration):
     """

@@ -1,12 +1,11 @@
 from openai.types.chat import ChatCompletion
 from typing import Union, List, Dict, Any, Tuple
 import uuid
-import textwrap
 
-from base_classes.operator import AbstractOperator
 from configuration.operator_configuration import CoTOperatorConfiguration
-from base_classes.tool import AbstractTool
+from base_classes.operator import AbstractOperator
 from base_classes.llm import AbstractLanguageModel
+from base_classes.prompt import AbstractPrompt
 from prompt.system_message import SystemMessagePrompt
 from prompt.user_message import UserMessagePrompt
 from prompt.few_shot import FewShotPrompt
@@ -14,7 +13,6 @@ from prompt.assistant_message import AssistantMessagePrompt
 from tools.demonstration_sampling import DemonstrationSamplingTool
 from base_classes.memory.memory_atom import AbstractMemoryAtom
 from base_classes.memory.datatypes.data_item import PromptDataItem
-from operators.op_prompt import COT_INSTRUCTION_PROMPT
 
 class CoTOperator(AbstractOperator):
     """
@@ -45,7 +43,7 @@ class CoTOperator(AbstractOperator):
         )
         return few_shot_demonstration_samples
         
-    async def run(self, input_message: Union[UserMessagePrompt, AssistantMessagePrompt]) -> Tuple[AbstractMemoryAtom, Dict[uuid.UUID, List[uuid.UUID]]]:
+    async def run(self, input_message: Union[UserMessagePrompt, AssistantMessagePrompt]) -> Tuple[AbstractPrompt, Dict[uuid.UUID, List[uuid.UUID]]]:
         """
         This method is used to run the CoT operator.
         """
@@ -83,5 +81,5 @@ class CoTOperator(AbstractOperator):
 
         self.logger.debug(f"Dependency graph: {dependency_graph}")
 
-        return cot_answer_memory_atom, dependency_graph
+        return cot_answer, dependency_graph
     

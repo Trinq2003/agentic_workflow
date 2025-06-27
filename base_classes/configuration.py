@@ -23,7 +23,6 @@ class Configuration(HasLoggerClass):
         
         self._sensitive_properties: List[str] = []  # Define sensitive properties
         self.logger.debug(f"List of {self.__class__.__name__}'s properties: {self._properties.keys()}")
-        self.logger.debug(f"List of {self.__class__.__name__}'s sensitive properties: {self._sensitive_properties}")
 
     @property
     def sensitive_properties(self) -> List[str]:
@@ -89,6 +88,7 @@ class Configuration(HasLoggerClass):
         """
         with open(path, "r", encoding="utf-8") as file:
             config = yaml.safe_load(file)
+            self.logger.debug(f"Loaded config: {config}")
             self._parse_hierarchical("", config)
 
     def __str__(self) -> str:
