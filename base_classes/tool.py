@@ -44,6 +44,8 @@ class AbstractTool(SystemComponent):
         else:
             self.__class__._tool_instances_by_id[self._tool_id] = self
         
+        self.logger.info(f"✅ Tool {self._tool_id} initiated successfully.")
+        
     @classmethod
     def get_tool_ids(cls) -> List[str]:
         """

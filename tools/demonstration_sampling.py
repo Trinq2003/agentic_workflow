@@ -45,14 +45,14 @@ class DemonstrationSamplingTool(AbstractTool):
             "highlight": self._highlight
         }
     
-    async def execute(self, input_message: Union[UserMessagePrompt, AssistantMessagePrompt]) -> List[Dict[str, Any]]:
+    async def execute(self, input_message: Union[UserMessagePrompt, AssistantMessagePrompt]) -> List[str]:
         """
         Execute the RAGFlow API call to retrieve chunks based on the input message.
         
         :param input_message: The input message containing the query
         :type input_message: Union[UserMessagePrompt, AssistantMessagePrompt]
         :return: A list of retrieved chunks from RAGFlow API
-        :rtype: List[Dict[str, Any]]
+        :rtype: List[str]
         """
         # Set the tool data
         self._set_tool_data(input_message)
@@ -74,13 +74,7 @@ class DemonstrationSamplingTool(AbstractTool):
                 if result.get("code") == 0:
                     plans = []
                     chunks = result.get("data", {}).get("chunks", [])
-                    for chunk in chunks:
-                        chunk_text = chunk.get("content", "")
-                        self.logger.debug(chunk_text)
-                        chunk_plan = parse_plan_xml(chunk_text)
-                        self.logger.debug(f"Chunk plan: {chunk_plan}")
-                        plans.append(chunk_plan)
-                    return plans
+                    return [chunk["content"] for chunk in chunks]
                 else:
                     # Handle API error
                     error_message = result.get("message", "Unknown error")

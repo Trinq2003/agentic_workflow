@@ -88,7 +88,7 @@ class RequestLLM(AbstractLanguageModel):
                     base_url=self._config.llm_api_api_base,
                     model=self._model_name,
                     temperature=self._temperature,
-                    num_ctx=self._max_tokens,
+                    num_predict=self._max_tokens,
                     streaming=self._stream,
                     callback_manager=callback_manager
                 )
@@ -149,8 +149,9 @@ class RequestLLM(AbstractLanguageModel):
             # Generate response
             response = self._llm_model.invoke(
                 messages,
-                stop=stop if stop else None
+                stop=stop
             )
+            self.logger.debug(f"Response: {response}")
             
             # Convert LangChain response to OpenAI ChatCompletion format
             return ChatCompletion.model_validate({

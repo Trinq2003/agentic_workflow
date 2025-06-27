@@ -127,4 +127,10 @@ class AbstractPrompt(HasLoggerClass):
         super().__init__()
         self.prompt = prompt
         # self.logger.debug(f"Prompt initialized with {len(self.prompt)} messages.")
+    
+    def __add__(self, other: "AbstractPrompt") -> "AbstractPrompt":
+        """
+        Add two prompts together.
+        """
+        return AbstractPrompt(prompt = self.prompt + other.prompt)
         

@@ -28,6 +28,8 @@ class AbstractNLPModel(SystemComponent):
         else:
             self.__class__._nlp_model_by_id[self._nlp_model_id] = self
         
+        self.logger.info(f"✅ NLP Model {self._nlp_model_id} initiated successfully.")
+        
     def load_config(self, nlp_config: NLPConfiguration) -> None:
         """
         Load the configuration for the NLP model.

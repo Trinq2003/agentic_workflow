@@ -61,6 +61,8 @@ class AbstractLanguageModel(SystemComponent):
             raise ValueError(f"LLM ID {self._llm_id} is already initiated.")
         else:
             self.__class__._llm_instances_by_id[self._llm_id] = self
+        
+        self.logger.info(f"✅ LLM {self._llm_id} initiated successfully.")
     @classmethod
     def get_llm_ids(cls) -> List[str]:
         """
@@ -115,7 +117,6 @@ class AbstractLanguageModel(SystemComponent):
         :type llm_config: LLMConfiguration
         """
         self._config = llm_config
-        self.logger.info(f"✅ LLM config loaded: {self._config.llm_id}")
     
     @abstractmethod
     def _load_model(self) -> None:
@@ -145,7 +146,7 @@ class AbstractLanguageModel(SystemComponent):
         """
         return self._query_call_count
     
-    def query(self, query: AbstractPrompt, num_responses: int = 1, stop: List[str] = ["\n"]) -> ChatCompletion:
+    def query(self, query: AbstractPrompt, num_responses: int = 1, stop: List[str] = None) -> ChatCompletion:
         """
         Abstract method to query the language model.
 
@@ -160,7 +161,7 @@ class AbstractLanguageModel(SystemComponent):
         return self._query(query = query, num_responses = num_responses, stop = stop)
 
     @abstractmethod
-    def _query(self, query: AbstractPrompt, num_responses: int = 1, stop: List[str] = ["\n"]) -> ChatCompletion:
+    def _query(self, query: AbstractPrompt, num_responses: int = 1, stop: List[str] = None) -> ChatCompletion:
         """
         Abstract method to query the language model.
 

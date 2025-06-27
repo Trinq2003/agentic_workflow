@@ -43,7 +43,9 @@ class AbstractEmbeddingModel(SystemComponent):
             raise ValueError(f"Embedding ID {self._emb_id} is already initiated.")
         else:
             self.__class__._emb_instances_by_id[self._emb_id] = self
-
+        
+        self.logger.info(f"✅ Embedding Model {self._emb_id} initiated successfully.")
+        
     @classmethod
     def get_emb_ids(cls) -> List[str]:
         """
