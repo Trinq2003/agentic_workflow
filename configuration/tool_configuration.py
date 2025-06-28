@@ -58,3 +58,14 @@ class DemonstrationSamplingToolConfiguration(ToolConfiguration):
             ['ragflow.highlight', False, bool],
         ]
         return base_properties + ragflow_properties
+
+class ToolChooserToolConfiguration(ToolConfiguration):
+    embbedding_models: list[str]
+    def __init__(self):
+        super().__init__()
+        
+    def _init_properties(self):
+        base_properties = super()._init_properties()
+        return base_properties + [
+            ['embbedding_models', [], list[str]],
+        ]

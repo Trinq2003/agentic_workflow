@@ -64,6 +64,12 @@ class AbstractTool(SystemComponent):
         :return: The instance if found, otherwise None.
         """
         return cls._tool_instances_by_id.get(tool_id, None)
+    @property
+    def tool_id(self) -> str:
+        """
+        Get the ID of the tool.
+        """
+        return self._tool_id
 
     def load_config(self, tool_config: ToolConfiguration) -> None:
         """

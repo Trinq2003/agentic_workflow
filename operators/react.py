@@ -23,20 +23,15 @@ class ReactOperator(AbstractOperator):
     """
     _config: ReActOperatorConfiguration = None
     _tool_chooser: ToolChooserTool = None
-    _callable_tools: Dict[str, Dict[str, Any]] = {}
+    _mcps: Dict[str, Any] = {}
     _max_iterations: int = 10
     _reasoning_llm: AbstractLanguageModel = None
     def __init__(self, config: ReActOperatorConfiguration) -> None:
         super().__init__(config = config)
-        self._max_iterations = config.max_iterations
-        self._callable_tools: Dict[str, AbstractTool] = {}
-        self._tool_chooser = ToolChooserTool.get_tool_instance_by_id(tool_id = "TOOL | " + config.tool_tool_choser)
-        callable_tools = config.tool_callable
-        for callable_tool in callable_tools:
-            tool = AbstractTool.get_tool_instance_by_id(tool_id = "TOOL | " + callable_tool)
-            self._callable_tools[callable_tool] = {'tool': tool}
-            # self._callable_tools[callable_tool]['description'] = as_json_schema(tool.__class__)
-        
+        self._max_iterations = config.react_tool_max_iterations
+        self._mcps = config.react_mcps
+        self.logger.debug(f"MCPS: {self._mcps}")
+        self._tool_chooser = ToolChooserTool.get_tool_instance_by_id(tool_id = "TOOL | " + self._tool_component[0].tool_id)
         self._reasoning_llm = self._llm_component[0] # Only 1 LLM component is allowed for React operator.
         
     def _choose_tool_id(self, input_message: str) -> Dict:
@@ -44,7 +39,7 @@ class ReactOperator(AbstractOperator):
         This method is used to choose the tool for the React operator. This method returns natural text for the tool to be used, in form of a prompt (tool call prompt).
         :return: The tool to be used for the React operator (natural text).
         """
-        tools_to_call: List[Dict] = self._tool_chooser.execute(input_message = input_message)
+        tools_to_call: List[Dict] = self._tool_chooser.execute(input_message = input_message) if self._tool_chooser else []
         return {"role": "tool",
             "content": f"You can call the following functions: {tools_to_call}",
             "tool_call_id": "tool_chooser"

@@ -57,25 +57,24 @@ class CoTOperatorConfiguration(OperatorConfiguration):
 
 class ReActOperatorConfiguration(OperatorConfiguration):
     """
-    Configuration class for CoT operator.
+    Configuration class for ReAct operator.
     """
-    tool_tool_choser: str
-    tool_callable: List[str]
-    max_iterations: int
+    react_prompt_instruction: str
+    react_tool_max_iterations: int
+    react_mcps: List[Dict[str, Any]]
     def __init__(self):
         super().__init__()
         sensitive_properties = []
         self.sensitive_properties = [property_.replace('.', '_') for property_ in sensitive_properties]
 
-
     def _init_properties(self):
         """
-        Define properties for CoT operator.
+        Define properties for ReAct operator.
         """
         return [
-            ['tool.tool_chooser', '', str], # Tool chooser
-            ['tool.callable', [], list], # Callable tools
-            ['max_iterations', 10, int], # Max iterations
+            ['react.prompt.instruction', '', str], # React prompt instruction
+            ['react.tool.max_iterations', 10, int], # React tool max iterations
+            ['react.mcps', [], list], # React MCPs
         ]
         
 class DebateOperatorConfiguration(OperatorConfiguration):
@@ -100,21 +99,6 @@ class DebateOperatorConfiguration(OperatorConfiguration):
             ['debate.num_of_debaters', 3, int], # Number of debaters
             ['debate.config.individual_configs', [], list], # Individual debater configurations
         ]
-    
-    def get_debater_configs(self) -> List[Dict[str, str]]:
-        """
-        Extract individual debater configurations from the loaded config.
-        
-        :return: List of debater configurations with llm_id
-        :rtype: List[Dict[str, str]]
-        """
-        debater_configs = []
-        self.logger.debug(f"Debater configs: {self.debate_config_individual_configs}")
-        if hasattr(self, 'debate_config_individual_configs') and self.debate_config_individual_configs:
-            for config_item in self.debate_config_individual_configs:
-                if isinstance(config_item, dict) and 'debater' in config_item:
-                    debater_configs.append(config_item['debater'])
-        return debater_configs
 
 class SelfConsistencyOperatorConfiguration(OperatorConfiguration):
     """

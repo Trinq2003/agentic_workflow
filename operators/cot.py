@@ -13,6 +13,7 @@ from prompt.assistant_message import AssistantMessagePrompt
 from tools.demonstration_sampling import DemonstrationSamplingTool
 from base_classes.memory.memory_atom import AbstractMemoryAtom
 from base_classes.memory.datatypes.data_item import PromptDataItem
+from memory.utils import visualize_dependency_graph
 
 class CoTOperator(AbstractOperator):
     """
@@ -50,11 +51,11 @@ class CoTOperator(AbstractOperator):
         # Operator execution logic
         instruction_prompt = SystemMessagePrompt(prompt = [{"role": "system", "content": self._config.cot_prompt_instruction}])
         demonstration_samples: FewShotPrompt = await self._demonstration_sampling(input_message = input_message)
-        user_prompt = UserMessagePrompt(prompt = [{"role": "user", "content": f"The user query is: \n <problem>{input_message.prompt[0].get('content')}</problem>. \n Please generate the plan following the given instruction."}])
+        wrapped_input_prompt = UserMessagePrompt(prompt = [{"role": "user", "content": f"The user query is: \n <problem>{input_message.prompt[0].get('content')}</problem>. \n Please generate the plan following the given instruction."}])
 
         final_cot_prompt = UserMessagePrompt([{
             "role": "user",
-            "content": instruction_prompt.prompt[0]["content"] + demonstration_samples.prompt[0]["content"] + user_prompt.prompt[0]["content"]
+            "content": instruction_prompt.prompt[0]["content"] + demonstration_samples.prompt[0]["content"] + wrapped_input_prompt.prompt[0]["content"]
         }])
         self.logger.debug(f"Final CoT prompt: {final_cot_prompt.prompt}")
         cot_query_answer: ChatCompletion = self._cot_llm.query(query = final_cot_prompt, num_responses= 1)
@@ -69,17 +70,23 @@ class CoTOperator(AbstractOperator):
         )
 
         self.logger.debug(f"CoT answer: {cot_answer.prompt}")
-
+        
+        input_prompt_memory_atom = AbstractMemoryAtom(data=PromptDataItem(input_message))
+        instruction_prompt_memory_atom = AbstractMemoryAtom(data=PromptDataItem(instruction_prompt))
+        wrapped_input_prompt_memory_atom = AbstractMemoryAtom(data=PromptDataItem(wrapped_input_prompt))
         demonstration_samples_memory_atom = AbstractMemoryAtom(data=PromptDataItem(demonstration_samples))
         cot_prompt_memory_atom = AbstractMemoryAtom(data=PromptDataItem(final_cot_prompt))
         cot_answer_memory_atom = AbstractMemoryAtom(data=PromptDataItem(cot_answer))
         dependency_graph = {
+            input_prompt_memory_atom.mem_atom_id: [wrapped_input_prompt_memory_atom.mem_atom_id, demonstration_samples_memory_atom.mem_atom_id],
+            wrapped_input_prompt_memory_atom.mem_atom_id: [cot_prompt_memory_atom.mem_atom_id],
+            instruction_prompt_memory_atom.mem_atom_id: [cot_prompt_memory_atom.mem_atom_id],
             demonstration_samples_memory_atom.mem_atom_id: [cot_prompt_memory_atom.mem_atom_id],
             cot_prompt_memory_atom.mem_atom_id: [cot_answer_memory_atom.mem_atom_id],
             cot_answer_memory_atom.mem_atom_id: []
         }
 
-        self.logger.debug(f"Dependency graph: {dependency_graph}")
+        self.logger.debug(f"Dependency graph: {visualize_dependency_graph(dependency_graph)}")
 
         return cot_answer, dependency_graph
     

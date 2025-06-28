@@ -10,6 +10,7 @@ class MemoryAtomType(IntEnum):
     USER_INPUT = 1 # User input, the system is waiting for user input
     ASSISTANT_OUTPUT = 2 # Assistant output, the system is waiting for assistant output
     TOOL_EXECUTION = 3 # Tool execution, the system is waiting for tool execution
+    SYSTEM_INSTRUCTION = 4 # System instruction, the system is waiting for system instruction
 
 class MemoryBlockState(IntEnum):
     EMPTY = 0 # Empty, no data in the memory block

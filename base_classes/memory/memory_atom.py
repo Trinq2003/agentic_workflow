@@ -46,6 +46,10 @@ class AbstractMemoryAtom(TimeTraceableItem, HasLoggerClass):
             self._type: MemoryAtomType = MemoryAtomType.ASSISTANT_OUTPUT
         elif prompt_role == "tool":
             self._type: MemoryAtomType = MemoryAtomType.TOOL_EXECUTION
+        elif prompt_role == "system":
+            self._type: MemoryAtomType = MemoryAtomType.SYSTEM_INSTRUCTION
+        else:
+            self._type: MemoryAtomType = MemoryAtomType.NONE_TYPE
         
         if self._mem_atom_id in self.__class__._mematom_instances_by_id.keys():
             self.logger.error(f"Memory Atom ID {self._mem_atom_id} is already initiated.")
