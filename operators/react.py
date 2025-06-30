@@ -1,7 +1,10 @@
-from typing import Union, Dict, Any, List
+from typing import Union, Dict, Any, List, Optional
 from collections.abc import Callable
-# from annotated_docs.json_schema import as_json_schema
 import json
+from contextlib import AsyncExitStack
+from fastmcp import Client
+import asyncio
+from torch import Tensor
 
 from base_classes.operator import AbstractOperator
 from base_classes.tool import AbstractTool
@@ -23,17 +26,49 @@ class ReactOperator(AbstractOperator):
     """
     _config: ReActOperatorConfiguration = None
     _tool_chooser: ToolChooserTool = None
-    _mcps: Dict[str, Any] = {}
+    _mcps: List[Dict[str, Any]] = []
     _max_iterations: int = 10
     _reasoning_llm: AbstractLanguageModel = None
+    _mcp_client: Client = None
+    _callable_tools: List[Dict] = []
+    _tool_emb_dict: Dict[str, Tensor] = {}
     def __init__(self, config: ReActOperatorConfiguration) -> None:
         super().__init__(config = config)
+        self.exit_stack = AsyncExitStack()
+
+        self._callable_tools = []
         self._max_iterations = config.react_tool_max_iterations
         self._mcps = config.react_mcps
-        self.logger.debug(f"MCPS: {self._mcps}")
         self._tool_chooser = ToolChooserTool.get_tool_instance_by_id(tool_id = "TOOL | " + self._tool_component[0].tool_id)
         self._reasoning_llm = self._llm_component[0] # Only 1 LLM component is allowed for React operator.
+    
+        self._callable_tools = asyncio.run(self.__connect_to_mcp_servers())
+        self.logger.debug(f"Callable tools: {self._callable_tools}")
         
+    async def __connect_to_mcp_servers(self) -> List[Dict]:
+        config = {
+            "mcpServers": {}
+        }
+        for mcp in self._mcps:
+            config["mcpServers"][mcp['server_id']] = {
+                "command": mcp['command'],
+                "args": mcp['args']
+            }
+
+        self._mcp_client = Client(config)
+        lst_tools = []
+        async with self._mcp_client:
+            tools = await self._mcp_client.list_tools()
+            for tool in tools:
+                lst_tools.append(
+                    {
+                        "name": tool.name,
+                        "description": tool.description,
+                        "input_schema": tool.inputSchema
+                    }
+                )
+        return lst_tools
+
     def _choose_tool_id(self, input_message: str) -> Dict:
         """
         This method is used to choose the tool for the React operator. This method returns natural text for the tool to be used, in form of a prompt (tool call prompt).
