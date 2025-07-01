@@ -59,7 +59,8 @@ class RequestEmbeddingModel(AbstractEmbeddingModel):
         elif self._config.model_provider == "cohere":
             self._emb_model = CohereEmbeddings(
                 cohere_api_key=self.__emb_api_api_token,
-                model=self._model_name
+                model=self._model_name,
+                user_agent="agentic_workflow"
             )
         elif self._config.model_provider == "xinference":
             self._emb_model = XinferenceEmbeddings(
