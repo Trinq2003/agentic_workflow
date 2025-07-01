@@ -107,7 +107,7 @@ class RequestLLM(AbstractLanguageModel):
                     model=self._model_name,
                     temperature=self._temperature,
                     max_output_tokens=self._max_tokens,
-                    streaming=self._stream,
+                    disable_streaming=not self._stream,
                     callback_manager=callback_manager
                 )
             else:
