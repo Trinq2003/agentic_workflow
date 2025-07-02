@@ -1,22 +1,26 @@
-from typing import Union, Dict, Any, List, Optional
-from collections.abc import Callable
+from typing import Union, Dict, Any, List, Tuple
 import json
-from contextlib import AsyncExitStack
 from fastmcp import Client
 import asyncio
 from torch import Tensor
+import uuid
+import re
+from copy import deepcopy
 
 from base_classes.operator import AbstractOperator
 from base_classes.tool import AbstractTool
 from base_classes.llm import AbstractLanguageModel
-from base_classes.memory.memory_block import AbstractMemoryBlock
 from base_classes.memory.memory_atom import AbstractMemoryAtom
 from base_classes.memory.datatypes.data_item import PromptDataItem
 from configuration.operator_configuration import ReActOperatorConfiguration
+from tools.tool_chooser import ToolChooserTool
+from tools.demonstration_sampling import DemonstrationSamplingTool
+from prompt.system_message import SystemMessagePrompt
 from prompt.user_message import UserMessagePrompt
 from prompt.assistant_message import AssistantMessagePrompt
 from prompt.tool_message import ToolMessagePrompt
-from tools.tool_chooser import ToolChooserTool
+from prompt.few_shot import FewShotPrompt
+from base_classes.prompt import AbstractPrompt
 
 class ReactOperator(AbstractOperator):
     """
@@ -26,39 +30,42 @@ class ReactOperator(AbstractOperator):
     """
     _config: ReActOperatorConfiguration = None
     _tool_chooser: ToolChooserTool = None
+    _demonstration_sampling_tool: DemonstrationSamplingTool = None
     _mcps: List[Dict[str, Any]] = []
     _max_iterations: int = 10
     _reasoning_llm: AbstractLanguageModel = None
-    _mcp_client: Client = None
-    _callable_tools: List[Dict] = []
+    _mcp_client_config: Dict[str, Any] = {}
+    _callable_tools: List[Dict[str, str]] = []
     _tool_emb_dict: Dict[str, Tensor] = {}
     def __init__(self, config: ReActOperatorConfiguration) -> None:
         super().__init__(config = config)
-        self.exit_stack = AsyncExitStack()
 
         self._callable_tools = []
         self._max_iterations = config.react_tool_max_iterations
         self._mcps = config.react_mcps
-        self._tool_chooser = ToolChooserTool.get_tool_instance_by_id(tool_id = "TOOL | " + self._tool_component[0].tool_id)
+        self._tool_chooser = self._tool_component[0]
+        self._demonstration_sampling_tool = self._tool_component[1]
         self._reasoning_llm = self._llm_component[0] # Only 1 LLM component is allowed for React operator.
-    
-        self._callable_tools = asyncio.run(self.__connect_to_mcp_servers())
-        self.logger.debug(f"Callable tools: {self._callable_tools}")
-        
-    async def __connect_to_mcp_servers(self) -> List[Dict]:
-        config = {
+
+        self._mcp_client_config = {
             "mcpServers": {}
         }
         for mcp in self._mcps:
-            config["mcpServers"][mcp['server_id']] = {
+            self._mcp_client_config["mcpServers"][mcp['server_id']] = {
                 "command": mcp['command'],
                 "args": mcp['args']
             }
 
-        self._mcp_client = Client(config)
+        self._callable_tools = asyncio.run(self.__connect_to_mcp_servers())
+        self.logger.debug(f"Callable tools: {self._callable_tools}")
+        self._tool_emb_dict = self._tool_chooser.get_tool_emb_dict(tool_description_dict = {tool['name']: tool['description'] for tool in self._callable_tools})
+        self.logger.info(f"✅ Operator {self._operator_id} initiated successfully.")
+        
+    async def __connect_to_mcp_servers(self) -> List[Dict[str, str]]:
         lst_tools = []
-        async with self._mcp_client:
-            tools = await self._mcp_client.list_tools()
+        mcp_client = Client(self._mcp_client_config)
+        async with mcp_client:
+            tools = await mcp_client.list_tools()
             for tool in tools:
                 lst_tools.append(
                     {
@@ -69,216 +76,177 @@ class ReactOperator(AbstractOperator):
                 )
         return lst_tools
 
-    def _choose_tool_id(self, input_message: str) -> Dict:
+    def _choose_tool_id(self, input_message: AbstractPrompt) -> ToolMessagePrompt:
         """
         This method is used to choose the tool for the React operator. This method returns natural text for the tool to be used, in form of a prompt (tool call prompt).
         :return: The tool to be used for the React operator (natural text).
         """
-        tools_to_call: List[Dict] = self._tool_chooser.execute(input_message = input_message) if self._tool_chooser else []
-        return {"role": "tool",
-            "content": f"You can call the following functions: {tools_to_call}",
+        tools_to_call: List[Dict] = self._tool_chooser.execute(input_message = input_message, tools_dict=self._tool_emb_dict, top_k=self._config.react_tool_top_k) if self._tool_chooser else []
+        self.logger.debug(f"Choosen tools: {tools_to_call}")
+        # Only include schemas for the top recommended tools
+        top_tool_names = {tool['tool_name'] for tool in tools_to_call}
+        tool_schemas = []
+        for tool in self._callable_tools:
+            if tool["name"] in top_tool_names:
+                tool_schema = {
+                    "id": tool["name"],
+                    "function": {
+                        "arguments": tool["input_schema"]
+                    }
+                }
+                tool_schemas.append(tool_schema)
+        # Output both the top tools and their schemas
+        return ToolMessagePrompt(prompt = [{
+            "role": "tool",
+            "content": (
+                f"You can only call the following functions (with their call schema):\n"
+                f"{json.dumps(tool_schemas, indent=2)}\n\n"
+            ),
             "tool_call_id": "tool_chooser"
-            }
+        }])
     
-    def _get_observation_by_executing_tool(self, list_of_tools: List) -> str:
-        _observation = ""
-        for tool in list_of_tools:
-            tool_id = "TOOL | " + tool['id']
-            tool_params = json.loads(tool['function']['arguments'])
-            tool_instance: AbstractTool = self._callable_tools[tool_id]['tool']
-            result = tool_instance.execute(function_params = tool_params)
-            self.memory_block.add_memory_atom(AbstractMemoryAtom(data = PromptDataItem(content = ToolMessagePrompt(prompt = {'role': 'tool', 'content': str(result), 'tool_call_id': tool_id}), source = tool_instance)))
-            _observation += f"Tool: {tool_id}\n"
-            _observation += f"Result: {result}\n"
-            
-        return f"<observation>{_observation}</observation>"
+    async def _executing_tool(self, list_of_tools: List) -> List[ToolMessagePrompt]:
+        mcp_client = Client(self._mcp_client_config)
+        async with mcp_client:
+            tool_results: List[ToolMessagePrompt] = []
+            for tool in list_of_tools:
+                self.logger.debug(f"Executing tool: {tool}")
+                result = await mcp_client.call_tool(name = tool['id'], arguments = tool['function']['arguments'])
+                tool_results.append(ToolMessagePrompt(prompt = [{'role': 'tool', 'content': str(result), 'tool_call_id': tool['id']}]))
+            self.logger.debug(f"Tool results: {tool_results}")
+            return tool_results
     
-    def run(self, input_message: Union[UserMessagePrompt, AssistantMessagePrompt]) -> AssistantMessagePrompt:
+    async def _demonstration_sampling(self, input_message: Union[UserMessagePrompt, AssistantMessagePrompt]) -> FewShotPrompt:
+        """
+        This method is used to demonstrate the sampling of the ReAct operator.
+        """
+
+        demonstration_samples: List[Dict[str, Any]] = await self._demonstration_sampling_tool.execute(input_message = input_message)
+        few_shot_demonstration_samples = FewShotPrompt(
+            prompt = [
+                {
+                    "role": "tool",
+                    "content": sample
+                } for sample in demonstration_samples
+            ]
+        )
+        self.logger.debug(f"Demonstration samples: {few_shot_demonstration_samples}")
+        return few_shot_demonstration_samples
+    
+    def __extract_tool_calls_from_action(self, action_content: str):
+        """
+        Extracts tool call(s) from the <action>...</action> tag(s) in the LLM response.
+        Returns a list of tool call dicts.
+        """
+        tool_calls = []
+        # Find all <action>...</action> blocks
+        action_blocks = re.findall(r"<action>(.*?)</action>", action_content, re.DOTALL)
+        for block in action_blocks:
+            block = block.strip()
+            try:
+                # Try to parse as JSON
+                tool_call = json.loads(block)
+                tool_calls.append(tool_call)
+            except Exception as e:
+                # If not valid JSON, skip or log
+                self.logger.error(f"Failed to parse tool call: {block} ({e})")
+        self.logger.debug(f"Tool calls after parsing: {tool_calls}")
+        return tool_calls
+
+    async def run(self, input_message: Union[UserMessagePrompt, AssistantMessagePrompt]) -> Tuple[AbstractPrompt, Dict[uuid.UUID, List[uuid.UUID]]]:
         """
         This method is used to run the React operator.
         """
-        self.memory_block: AbstractMemoryBlock = AbstractMemoryBlock()
-        REACT_MESSAGE = [
-            {
-                "role": "system",
-                "content": "You are a helpful assistant who can answer multistep questions by sequentially calling functions. Follow a pattern of THOUGHT (reason step-by-step about which function to call next in <though></though> XML tags), ACTION (call a function to as a next step towards the final answer in <action></action> XML tags), OBSERVATION (output of the function in <observation></observation> XML tags). Reason step by step which actions to take to get to the answer. When you get the result, encloses it inside <finish></finish> XML tag. Only call functions with arguments coming verbatim from the user or the output of other functions."
-            },
-            {
-                "role": "user",
-                "content": "What is the elevation range for the area that the eastern sector of the Colorado orogeny extends into?"
-            },
-            {
-                "role": "assistant",
-                "content": "<thought>Thought 1: I need to search Colorado orogeny, find the area that the eastern sector of the Colorado orogeny extends into, then find the elevation range of the area.</thought>",
-            },
-            {
-                "role": "tool",
-                "content": "You can call the following functions: [{{\"wikipedia\": {{\"entity\": {{\"type\": \"string\", \"description\": \"The entity to search for in Wikipedia.\"}}}}}}]",
-                "tool_call_id": "tool_chooser"
-            },
-            {
-                "role": "assistant",
-                "content": "<action>Action 1: wikipedia[Colorado orogeny]</action>",
-                "tool_calls": [
-                    {
-                        "id": "wikipedia",
-                        "function": {
-                            "arguments": "{{\"entity\": \"Colorado orogeny\"}}",
-                            "name": "wikipedia"
-                        },
-                        "type": "function",
-                    }
-                ]
-            },
-            {
-                "role": "tool",
-                "content": "<observation>Observation 1: The Colorado orogeny was an episode of mountain building (an orogeny) in Colorado and surrounding areas.</observation>",
-                "tool_call_id": "environment"
-            },
-            {
-                "role": "assistant",
-                "content": "<thought>Thought 2: It does not mention the eastern sector. So I need to look up eastern sector.</thought>"
-            },
-            {
-                "role": "tool",
-                "content": "You can call the following functions: [{{\"look_up\": {{\"keyword\": {{\"type\": \"string\", \"description\": \"Lookup the keywords in the given text.\"}}}}}}]",
-                "tool_call_id": "tool_chooser"
-            },
-            {
-                "role": "assistant",
-                "content": "<action>Action 2: look_up[eastern sector]</action>",
-                "tool_calls": [
-                    {
-                        "id": "look_up",
-                        "function": {
-                            "arguments": "{{\"keyword\": \"eastern sector\"}}",
-                            "name": "look_up"
-                        },
-                        "type": "function",
-                    }
-                ]
-            },
-            {
-                "role": "tool",
-                "content": "<observation>Observation 2: (Result 1 / 1) The eastern sector extends into the High Plains and is called the Central Plains orogeny.</observation>",
-                "tool_call_id": "environment"
-            },
-            {
-                "role": "assistant",
-                "content": "<thought>Thought 3: The eastern sector of Colorado orogeny extends into the High Plains. So I need to search High Plains and find its elevation range.</thought>"
-            },
-            {
-                "role": "tool",
-                "content": "You can call the following functions: [{{\"look_up\": {{\"keyword\": {{\"type\": \"string\", \"description\": \"Lookup the keywords in the given text.\"}}}}}}]",
-                "tool_call_id": "tool_chooser"
-            },
-            {
-                "role": "assistant",
-                "content": "<action>Action 3: look_up[high Plains]</action>",
-                "tool_calls": [
-                    {
-                        "id": "look_up",
-                        "function": {
-                            "arguments": "{{\"keyword\": \"high Plains\"}}",
-                            "name": "look_up"
-                        },
-                        "type": "function",
-                    }
-                ]
-            },
-            {
-                "role": "tool",
-                "content": "<observation>Observation 3: High Plains refers to one of two distinct land regions:</observation>",
-                "tool_call_id": "environment"
-            },
-            {
-                "role": "assistant",
-                "content": "<thought>Thought 4: I need to instead search High Plains (United States).</thought>"
-            },
-            {
-                "role": "tool",
-                "content": "You can call the following functions: [{{\"wikipedia\": {{\"entity\": {{\"type\": \"string\", \"description\": \"The entity to search for in Wikipedia.\"}}}}}}]",
-                "tool_call_id": "tool_chooser"
-            },
-            {
-                "role": "assistant",
-                "content": "<action>Action 4: wikipedia[High Plains (United States)]</action>",
-                "tool_calls": [
-                    {
-                        "id": "wikipedia",
-                        "function": {
-                            "arguments": "{{\"entity\": \"High Plains (United States)\"}}",
-                            "name": "wikipedia"
-                        },
-                        "type": "function",
-                    }
-                ]
-            },
-            {
-                "role": "tool",
-                "content": "<observation>Observation 4: The High Plains are a subregion of the Great Plains. From east to west, the High Plains rise in elevation from around 1,800 to 7,000 ft (550 to 2,130 m).</observation>",
-                "tool_call_id": "environment"
-            },
-            {
-                "role": "assistant",
-                "content": "<thought>Thought 5: High Plains rise in elevation from around 1,800 to 7,000 ft, so the answer is 1,800 to 7,000 ft.</thought><finish>1,800 to 7,000 ft</finish>"
-            },
-            {
-                "role": "user",
-                "content": input_message.prompt[0]["content"],
-            },
-        ]
+        input_message_mem_atom = AbstractMemoryAtom(data = PromptDataItem(input_message))
+        instruction_prompt = SystemMessagePrompt(prompt = [{"role": "system","content": self._config.react_prompt_instruction}])
+        thought_prompt = SystemMessagePrompt(prompt = [{"role": "system","content": self._config.react_prompt_thought}]) + SystemMessagePrompt(prompt = [{"role": "system","content": f"The list of tools you can call are: {self._callable_tools}"}])
+        action_prompt = SystemMessagePrompt(prompt = [{"role": "system","content": self._config.react_prompt_action}])
+        instruction_prompt_mem_atom = AbstractMemoryAtom(data = PromptDataItem(instruction_prompt))
+        demonstration_samples: FewShotPrompt = await self._demonstration_sampling(input_message = input_message)
+        demonstration_samples_mem_atom = AbstractMemoryAtom(data = PromptDataItem(demonstration_samples))
         
-        # Store the input message in memory block
-        input_message_mem_atom = AbstractMemoryAtom(
-            data = PromptDataItem(content = input_message, source = "user")
-        )
-        self.memory_block.add_memory_atom(input_message_mem_atom)
-        
+        wrapped_input_prompt = UserMessagePrompt(prompt = [{"role": "user", "content": f"The user query is: \n {input_message.prompt[0].get('content')}."}])
+        wrapped_input_prompt_mem_atom = AbstractMemoryAtom(data = PromptDataItem(wrapped_input_prompt))
+        react_message = instruction_prompt + wrapped_input_prompt
+        react_message_mem_atom = AbstractMemoryAtom(data = PromptDataItem(react_message))
+        self.logger.debug(f"React message: {react_message.prompt}")
+
+        dependency_graph: Dict[uuid.UUID, List[uuid.UUID]] = {}
+        dependency_graph[input_message_mem_atom.mem_atom_id] = [demonstration_samples_mem_atom.mem_atom_id, wrapped_input_prompt_mem_atom.mem_atom_id]
+        dependency_graph[instruction_prompt_mem_atom.mem_atom_id] = [react_message_mem_atom.mem_atom_id]
+        dependency_graph[demonstration_samples_mem_atom.mem_atom_id] = [react_message_mem_atom.mem_atom_id]
+        dependency_graph[wrapped_input_prompt_mem_atom.mem_atom_id] = [react_message_mem_atom.mem_atom_id]
+        dependency_graph[react_message_mem_atom.mem_atom_id] = []
+
+        react_mem_atoms: List[List[AbstractMemoryAtom]] = []
         for i in range(self._max_iterations):
-            thought_response = self._reasoning_llm.query(prompt = REACT_MESSAGE, num_responses = 1, stop = [f"<action>"])
-            thought_response_str = self._reasoning_llm.get_response_texts(query_responses = thought_response)[0]
-            # Thoughts are generated as a thinking step. Consider these as a memory atom and add these thoughts to the memory block.
+            self.logger.debug(f"Iteration {i+1} of {self._max_iterations}")
+            round_mem_atoms: List[AbstractMemoryAtom] = []
+            # Thought step
+            thought_prompt_input = deepcopy(react_message) + deepcopy(demonstration_samples) + deepcopy(thought_prompt)
+            self.logger.debug(f"Thought prompt input: {thought_prompt_input.prompt}")
+            raw_thought_response = self._reasoning_llm.query(query = thought_prompt_input, num_responses = 1, stop = [f"<action>"])
+            self.logger.debug(f"Raw thought response: {raw_thought_response}")
+            thought_response = AssistantMessagePrompt(prompt = [{'role': 'assistant', 'content': self._reasoning_llm.get_response_texts(query_responses = raw_thought_response)[0]}])
+            react_message += thought_response
             thought_response_mem_atom = AbstractMemoryAtom(
                 data = PromptDataItem(
-                    content = AssistantMessagePrompt(
-                        prompt = {'role': 'assistant', 'content': thought_response_str}
-                        ), source = self._reasoning_llm
+                    content = thought_response,
+                    source = self._reasoning_llm
                     )
                 )
-            self.memory_block.add_memory_atom(thought_response_mem_atom)
-            if 'finish' in thought_response_str.lower():
+            round_mem_atoms.append(thought_response_mem_atom)
+            if i == 0:
+                dependency_graph[react_message_mem_atom.mem_atom_id] = [thought_response_mem_atom.mem_atom_id]
+            else:
+                dependency_graph[react_mem_atoms[-1][-1].mem_atom_id] = [thought_response_mem_atom.mem_atom_id]
+            if '<finish>' in thought_response.prompt[0].get('content').lower():
                 break
+            # self.logger.debug(f"ReAct message after thought step: {react_message.prompt}")
+            self.logger.debug(f"Completed thought step of iteration {i+1} of {self._max_iterations}")
             
-            tool_chooser_response: Dict = self._choose_tool_id(input_message = thought_response_str)
-            # Tool chooser was called. Consider this as a memory atom and add this to the memory block.
+            # Tool chooser step
+            tool_chooser_response: ToolMessagePrompt = self._choose_tool_id(input_message = thought_response)
             tool_chooser_response_mem_atom = AbstractMemoryAtom(
-                data = PromptDataItem(content = ToolMessagePrompt(prompt = tool_chooser_response), source = self._tool_chooser)
-                )
-            self.memory_block.add_memory_atom(tool_chooser_response_mem_atom)
+                data = PromptDataItem(content = tool_chooser_response, source = self._tool_chooser)
+            )
+            round_mem_atoms.append(tool_chooser_response_mem_atom)
+            dependency_graph[thought_response_mem_atom.mem_atom_id] = [tool_chooser_response_mem_atom.mem_atom_id]
+            # self.logger.debug(f"ReAct message after tool chooser step: {react_message.prompt}")
+            self.logger.debug(f"Completed tool chooser step of iteration {i+1} of {self._max_iterations}")
             
-            REACT_MESSAGE.append(tool_chooser_response)
-            action = self._reasoning_llm.query(prompt = REACT_MESSAGE, num_responses = 1, stop = [f"<observation>"])
-            # Reasoning LLM is called to get the tool to be used (the list of tools is given by tool chooser). Consider this as a memory atom and add this to the memory block.
+            # Action step
+            action_prompt_input = deepcopy(react_message) + deepcopy(action_prompt) + deepcopy(tool_chooser_response) + deepcopy(wrapped_input_prompt)
+            self.logger.debug(f"Action prompt input: {action_prompt_input.prompt}")
+            action = self._reasoning_llm.query(query = action_prompt_input, num_responses = 1, stop = [f"<observation>"])
+            self.logger.debug(f"Action: {action}")
+            action_response = AssistantMessagePrompt(prompt = [{'role': 'assistant', 'content': self._reasoning_llm.get_response_texts(query_responses = action)[0]}])
+            react_message += tool_chooser_response
+            react_message += action_response
             action_mem_atom = AbstractMemoryAtom(
-                data = PromptDataItem(content = AssistantMessagePrompt(prompt = action), source = self._reasoning_llm)
+                data = PromptDataItem(content = action_response, source = self._reasoning_llm)
             )
-            self.memory_block.add_memory_atom(action_mem_atom)
-            tool_calls_response = action['tool_calls']
-            tool_observations: str = self._get_observation_by_executing_tool(input_message = tool_calls_response)
-            tool_observations_mem_atom = AbstractMemoryAtom(
-                data = PromptDataItem(content = ToolMessagePrompt(prompt = {'role': 'tool', 'content': tool_observations, 'tool_call_id': 'environment'}), source = self._callable_tools['TOOL | environment']['tool'])
-            )
-            self.memory_block.add_memory_atom(tool_observations_mem_atom)
-            REACT_MESSAGE.append({'role': 'tool', 'content': tool_observations, 'tool_call_id': 'environment'})
-
-            input_message_mem_atom.requiring_atom.append(thought_response_mem_atom.mem_atom_id)
-            thought_response_mem_atom.requiring_atom.append(tool_chooser_response_mem_atom.mem_atom_id)
-            tool_chooser_response_mem_atom.requiring_atom.append(action_mem_atom.mem_atom_id)
-            action_mem_atom.requiring_atom.append(tool_observations_mem_atom.mem_atom_id)
+            round_mem_atoms.append(action_mem_atom)
+            dependency_graph[tool_chooser_response_mem_atom.mem_atom_id] = [action_mem_atom.mem_atom_id]
+            dependency_graph[action_mem_atom.mem_atom_id] = []
+            # self.logger.debug(f"ReAct message after action step: {react_message.prompt}")
+            self.logger.debug(f"Completed action step of iteration {i+1} of {self._max_iterations}")
             
-            thought_response_mem_atom.required_atom.append(input_message_mem_atom.mem_atom_id)
-            tool_chooser_response_mem_atom.required_atom.append(thought_response_mem_atom.mem_atom_id)
-            action_mem_atom.required_atom.append(tool_chooser_response_mem_atom.mem_atom_id)
-            tool_observations_mem_atom.required_atom.append(action_mem_atom.mem_atom_id)
-        return AssistantMessagePrompt(prompt={'role': 'assistant', 'content': thought_response_str})
+            # Tool execution step
+            action_content = action.choices[0].message.content
+            tool_calls_response = self.__extract_tool_calls_from_action(action_content)
+            tool_execution_results: List[ToolMessagePrompt] = await self._executing_tool(list_of_tools = tool_calls_response)
+            tool_observation_str = ""
+            for tool_result in tool_execution_results:
+                tool_observation_str += f"Tool: {tool_result.prompt[0].get('tool_call_id')}\n"
+                tool_observation_str += f"\tResult: {tool_result.prompt[0].get('content')}\n"
+                tool_execution_result_mem_atom = AbstractMemoryAtom(
+                    data = PromptDataItem(content = tool_result, source = tool_result.prompt[0].get('tool_call_id'))
+                )
+                round_mem_atoms.append(tool_execution_result_mem_atom)
+                dependency_graph[action_mem_atom.mem_atom_id].extend([tool_execution_result_mem_atom.mem_atom_id])
+            react_message += ToolMessagePrompt(prompt = [{'role': 'tool', 'content': tool_observation_str, 'tool_call_id': 'environment'}])
+            react_mem_atoms.append(round_mem_atoms)
+            # self.logger.debug(f"ReAct message after tool execution step: {react_message.prompt}")
+            self.logger.debug(f"Completed tool execution step of iteration {i+1} of {self._max_iterations}")
+        return thought_response, dependency_graph

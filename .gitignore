@@ -5,3 +5,4 @@
 **.yaml
 /prior_works/
 /tools/mcp/node_modules
+/test_utils/logs/

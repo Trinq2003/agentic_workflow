@@ -53,7 +53,7 @@ class RequestLLM(AbstractLanguageModel):
                     streaming=self._stream,
                     callback_manager=callback_manager
                 )
-            elif self._config.model_provider == "openai":
+            elif self._config.model_provider == "openai" or self._config.model_provider == "openrouter":
                 self._llm_model = ChatOpenAI(
                     model_name=self._model_name,
                     openai_api_key=self._config.llm_api_api_key,

@@ -60,7 +60,10 @@ class ReActOperatorConfiguration(OperatorConfiguration):
     Configuration class for ReAct operator.
     """
     react_prompt_instruction: str
+    react_prompt_thought: str
+    react_prompt_action: str
     react_tool_max_iterations: int
+    react_tool_top_k: int
     react_mcps: List[Dict[str, Any]]
     def __init__(self):
         super().__init__()
@@ -73,7 +76,10 @@ class ReActOperatorConfiguration(OperatorConfiguration):
         """
         return [
             ['react.prompt.instruction', '', str], # React prompt instruction
+            ['react.prompt.thought', '', str], # React prompt thought
+            ['react.prompt.action', '', str], # React prompt action
             ['react.tool.max_iterations', 10, int], # React tool max iterations
+            ['react.tool.top_k', 5, int], # React tool top k
             ['react.mcps', [], list], # React MCPs
         ]
         
